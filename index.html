@@ -16,14 +16,14 @@
     --border-strong: rgba(94,169,255,0.55);
     --blue: #4fc3f7;
     --blue-dim: #2b6f96;
-    --purple: #8b6bff;
+    --purple: #c0afff;
     --gold: #f6c453;
     --green: #34d399;
-    --red: #f76b6b;
+    --red: #faa2a2;
     --text: #e7ecfb;
-    --text-dim: #8a94b8;
-    --text-mid: #a9b4d0;
-    --text-dim2: #5c6786;
+    --text-dim: #b3b9d1;
+    --text-mid: #b0bad4;
+    --text-dim2: #b3bacd;
     --radius-cut: 14px;
   }
 
@@ -242,7 +242,7 @@
   .penalty-rows{ display:flex; flex-direction:column; gap:10px; }
   .penalty-row{ display:flex; align-items:center; gap:12px; font-size:13px; }
   .penalty-ex-name{ flex-basis: 200px; flex-shrink:0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
-  .penalty-ex-name span{ font-size:10px; letter-spacing:1.5px; margin-right:6px; }
+  .penalty-ex-name span{ font-size:11px; letter-spacing:1.5px; margin-right:6px; }
   .penalty-track{ flex:1; }
   .penalty-target{ font-family:'JetBrains Mono', monospace; font-size:12px; color: var(--text-mid); flex-shrink:0; }
   .penalty-row.met .penalty-target{ color: var(--green); }
@@ -301,7 +301,7 @@
   }
   .boss-hp-text{ font-family:'JetBrains Mono', monospace; font-size:12px; color: var(--text-mid); }
   .boss-slain-stamp{ color: var(--green); font-weight:700; letter-spacing:0.5px; text-shadow: 0 0 8px rgba(52,211,153,0.4); }
-  .boss-damage-line{ color: var(--boss-color, #ff8a7a) !important; }
+  .boss-damage-line{ color: var(--boss-color, #ffa195) !important; }
   .boss-slain-banner{ color: var(--green) !important; text-shadow: 0 0 12px rgba(52,211,153,0.5) !important; }
   .boss-log-row{
     display:flex; align-items:center; gap:12px;
@@ -333,9 +333,9 @@
   .ach-icon{ font-size:14px; }
   .ach-name{ font-family:'Orbitron', sans-serif; font-size:13px; color:#fff; }
   .ach-title{ font-size:12px; color: var(--gold); font-weight:600; letter-spacing:0.5px; }
-  .ach-desc{ font-size:11px; color: var(--text-dim2); line-height:1.4; flex:1; }
+  .ach-desc{ font-size:12px; color: var(--text-dim2); line-height:1.4; flex:1; }
   .achievement-chip .btn{ margin-top:6px; align-self:flex-start; }
-  .ach-locked-note{ font-size:10px; letter-spacing:1.5px; color: var(--text-dim2); margin-top:6px; }
+  .ach-locked-note{ font-size:11px; letter-spacing:1.5px; color: var(--text-dim2); margin-top:6px; }
   .achievement-unlock{ color: var(--gold) !important; }
   .achievement-title-line{ display:block; font-family:'Rajdhani', sans-serif; font-size:13px; font-weight:600; margin-top:4px; letter-spacing:0.5px; }
 
@@ -432,7 +432,7 @@
   }
   .streak-label{ font-size:11px; color: var(--text-dim2); letter-spacing:2px; margin-top:4px; }
   .streak-bonus{ font-family:'JetBrains Mono', monospace; font-size:11px; color: var(--green); margin-top:4px; }
-  .grace-status{ font-size:10px; color: var(--text-dim2); margin-top:4px; letter-spacing:0.5px; }
+  .grace-status{ font-size:11px; color: var(--text-dim2); margin-top:4px; letter-spacing:0.5px; }
 
   /* ---------- Stats row ---------- */
   .substats{
@@ -441,7 +441,7 @@
   .substat{ }
   .substat-head{ display:flex; justify-content:space-between; font-size:12px; letter-spacing:1.5px; margin-bottom:6px; }
   .substat-head b{ font-family:'JetBrains Mono', monospace; font-size:12px; font-weight:500; color: var(--text-mid); }
-  .substat-head em{ font-style:normal; font-size:10px; color: var(--text-dim2); letter-spacing:1px; margin-left:6px; }
+  .substat-head em{ font-style:normal; font-size:11px; color: var(--text-mid); letter-spacing:1px; margin-left:6px; }
 
   /* ---------- Info bubbles ---------- */
   .info-btn{
@@ -483,12 +483,12 @@
     color: var(--blue);
     margin-bottom: 6px;
   }
-  .substat-bar{ height:6px; background:rgba(255,255,255,0.05); border:1px solid var(--border); overflow:hidden; }
+  .substat-bar{ height:6px; background:rgba(255,255,255,0.1); border:1px solid var(--border); overflow:hidden; }
   .substat-fill{ height:100%; transition: width .5s ease; }
   .substat-fill.maxed{ box-shadow: 0 0 8px currentColor; }
-  .substat .str{ color:#ff8a7a; } .substat-fill.str{ background: linear-gradient(90deg,#a13f34,#ff8a7a); }
+  .substat .str{ color:#ffa195; } .substat-fill.str{ background: linear-gradient(90deg,#a13f34,#ffa195); }
   .substat .agi{ color:#7ce0a0; } .substat-fill.agi{ background: linear-gradient(90deg,#1f6b45,#7ce0a0); }
-  .substat .vit{ color:#8fb8ff; } .substat-fill.vit{ background: linear-gradient(90deg,#2c4f96,#8fb8ff); }
+  .substat .vit{ color:#93bbff; } .substat-fill.vit{ background: linear-gradient(90deg,#2c4f96,#93bbff); }
 
   /* ---------- Grid layout ---------- */
   .grid-2{ display:grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
@@ -536,6 +536,7 @@
     font-style: normal;
   }
   .num-input{ width: 90px; }
+  .num-input::placeholder, input::placeholder{ color: var(--text-dim); opacity: 1; }
   .btn{
     background: rgba(79,195,247,0.08);
     border: 1px solid var(--border-strong);
@@ -553,7 +554,7 @@
   .btn.primary:hover{ box-shadow: 0 0 20px rgba(139,107,255,0.35); }
   .btn.ghost{ background:transparent; color: var(--text-dim2); border-color: var(--border); font-weight:600; }
   .btn.small{ padding:6px 12px; font-size:11px; }
-  .btn:disabled{ opacity:0.35; cursor:not-allowed; box-shadow:none; }
+  .btn:disabled{ opacity:0.55; cursor:not-allowed; box-shadow:none; }
 
   .builder-pills{ display:flex; flex-direction:column; gap:8px; margin-bottom: 16px; }
   .empty-note{ color: var(--text-dim2); font-size: 13px; font-style: italic; padding: 6px 0; }
@@ -565,7 +566,7 @@
     font-size: 13px;
   }
   .pill-row .name{ font-weight:700; flex:1; }
-  .pill-row .cat{ font-size:10px; letter-spacing:1px; color: var(--text-dim2); border:1px solid var(--border); padding:2px 6px; }
+  .pill-row .cat{ font-size:11px; letter-spacing:1px; color: var(--text-mid); border:1px solid var(--border); padding:2px 6px; }
   .pill-row .sets{ font-family:'JetBrains Mono', monospace; color: var(--blue); font-size:12px; }
   .pill-row .remove{ background:none; border:none; color: var(--red); font-size:16px; line-height:1; padding:0 4px; }
 
@@ -580,14 +581,14 @@
   .ex-mgr-row{ display:flex; align-items:center; justify-content:space-between; padding:5px 0; font-size:13px; }
   .ex-mgr-row.is-hidden span{ color: var(--text-dim2); text-decoration: line-through; }
   .ex-mgr-row .btn{ margin-top:0; }
-  .ex-mgr-note{ font-size:11px; color: var(--text-dim2); line-height:1.4; }
+  .ex-mgr-note{ font-size:12px; color: var(--text-dim2); line-height:1.4; }
 
   /* ---------- Job board ---------- */
   .board-head{ display:flex; justify-content:space-between; align-items:flex-end; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
   .board-type{ font-family:'Orbitron', sans-serif; font-size:16px; letter-spacing:1.5px; text-shadow: 0 0 10px currentColor; }
   .board-sub{ font-size:11px; color: var(--text-dim2); letter-spacing:1px; margin-top:3px; }
   .gate-select-row{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px; padding-bottom:14px; border-bottom:1px dashed var(--border); }
-  .gate-select-label{ font-size:10px; letter-spacing:2px; color: var(--text-dim2); flex-shrink:0; }
+  .gate-select-label{ font-size:11px; letter-spacing:2px; color: var(--text-mid); flex-shrink:0; }
   .gate-pills{ display:flex; gap:6px; }
   .gate-pill{
     width:28px; height:28px;
@@ -615,10 +616,10 @@
     0%, 100%{ box-shadow: 0 0 0 rgba(52,211,153,0); }
     50%{ box-shadow: 0 0 14px rgba(52,211,153,0.35); }
   }
-  .contract-cat{ font-size:10px; letter-spacing:2px; font-weight:700; }
+  .contract-cat{ font-size:11px; letter-spacing:2px; font-weight:700; }
   .contract-name{ font-family:'Orbitron', sans-serif; font-size:14px; color:#fff; margin-bottom:2px; }
   .contract-target{ font-family:'JetBrains Mono', monospace; font-size:12px; color: var(--text-mid); }
-  .contract-flavor{ font-size:11px; color: var(--text-dim2); font-style:italic; margin-bottom:8px; }
+  .contract-flavor{ font-size:12px; color: var(--text-dim2); font-style:italic; margin-bottom:8px; }
   .contract-card .btn{ align-self:flex-start; }
   .contract-accepted{ font-family:'JetBrains Mono', monospace; font-size:12px; color: var(--green); letter-spacing:1px; }
   .contract-cleared{ font-family:'Orbitron', sans-serif; font-size:12px; color: var(--green); letter-spacing:1.5px; text-shadow: 0 0 10px rgba(52,211,153,0.5); }
@@ -638,7 +639,7 @@
     font-size: 12px;
     font-family:'JetBrains Mono', monospace;
   }
-  .ex-mgr-unit{ font-size:10px; color: var(--text-dim2); }
+  .ex-mgr-unit{ font-size:11px; color: var(--text-dim2); }
   .ex-mgr-row{ gap:10px; }
   .roster-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 0; font-size:13px; }
   .roster-row select{ min-width: 150px; flex:none; }
@@ -651,12 +652,12 @@
   .hm-cell{ width:12px; height:12px; background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.03); }
   .hm-cell.logged{ background: var(--blue); box-shadow: 0 0 6px rgba(79,195,247,0.6); }
   .hm-cell.today{ outline: 1px solid var(--gold); }
-  .heatmap-legend{ display:flex; align-items:center; gap:6px; margin-top:10px; font-size:10px; color:var(--text-dim2); flex-wrap:wrap; }
+  .heatmap-legend{ display:flex; align-items:center; gap:6px; margin-top:10px; font-size:11px; color:var(--text-dim2); flex-wrap:wrap; }
   .heatmap-legend .hm-cell{ width:10px; height:10px; }
 
   /* ---------- Progress chart ---------- */
   .chart-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
-  .chart-caption{ font-size:11px; color: var(--text-dim2); margin-bottom:8px; line-height:1.4; }
+  .chart-caption{ font-size:12px; color: var(--text-dim2); margin-bottom:8px; line-height:1.4; }
   .chart-head select{ min-width: 140px; flex:none; }
   svg.progress-svg{ width:100%; height:170px; overflow:visible; }
   .no-data{ color: var(--text-dim2); font-size:13px; font-style:italic; padding: 40px 0; text-align:center; }
@@ -710,7 +711,7 @@
   .guild-card-canvas{ width:100%; height:auto; display:block; border:1px solid var(--border); }
   .card-actions{ display:flex; gap:10px; justify-content:center; margin-top:16px; flex-wrap:wrap; }
   .card-actions button{ margin-top:0; }
-  .card-hint{ font-size:11px; color: var(--text-dim2); text-align:center; margin-top:12px; line-height:1.4; }
+  .card-hint{ font-size:12px; color: var(--text-dim2); text-align:center; margin-top:12px; line-height:1.4; }
   .settings-input{
     width:100%;
     background: rgba(255,255,255,0.03);
@@ -726,11 +727,11 @@
   .avatar-preview-frame .avatar-placeholder{ font-size:28px; }
   .avatar-settings-actions{ display:flex; gap:8px; flex-wrap:wrap; }
   .avatar-settings-actions .btn{ margin-top:0; }
-  .avatar-status-msg{ font-size:11px; color: var(--text-dim2); margin-top:8px; min-height:14px; }
+  .avatar-status-msg{ font-size:12px; color: var(--text-dim2); margin-top:8px; min-height:14px; }
 
   /* ---------- Footer ---------- */
   .footer{ text-align:center; margin-top: 30px; }
-  .storage-mode-note{ font-size:11px; color: var(--text-dim2); letter-spacing:0.5px; margin-bottom:12px; }
+  .storage-mode-note{ font-size:12px; color: var(--text-dim2); letter-spacing:0.5px; margin-bottom:12px; }
   .sync-status{ font-family:'JetBrains Mono', monospace; font-size:11px; margin-bottom:10px; min-height:14px; letter-spacing:0.5px; }
   .sync-status.saving{ color: var(--text-dim2); }
   .sync-status.retrying{ color: var(--gold); }
@@ -821,10 +822,10 @@
   ];
 
   const CATEGORY_LABEL = { STR:"Strength — Push, Pull, Press", AGI:"Agility — Speed & Power", VIT:"Vitality — Endurance & Core" };
-  const RANK_COLORS = { E:"#aab6dd", D:"#4fc3f7", C:"#34d399", B:"#8b6bff", A:"#ff8a5c", S:"#f6c453" };
+  const RANK_COLORS = { E:"#adb9de", D:"#4fc3f7", C:"#34d399", B:"#c0afff", A:"#ffa37e", S:"#f6c453" };
 
   const CONTRACT_LABELS = { STR:"Strength Contract", AGI:"Agility Contract", VIT:"Vitality Contract", FULL:"Full Hunt", REST:"Guild Holiday" };
-  const CONTRACT_COLORS = { STR:"#ff8a7a", AGI:"#7ce0a0", VIT:"#8fb8ff", FULL:"#f6c453", REST:"#7a86a8" };
+  const CONTRACT_COLORS = { STR:"#ffa195", AGI:"#7ce0a0", VIT:"#93bbff", FULL:"#f6c453", REST:"#b3bacd" };
   const RANK_ORDER = ["E","D","C","B","A","S"];
   const SYNC_STATUS_TEXT = { idle:"", saving:"◆ Saving…", retrying:"⚠ Connection hiccup — retrying save…", stalled:"⚠ Not saving right now — your progress is safe on screen, but reload will lose it." };
   const GATE_TARGETS = {
@@ -1118,9 +1119,9 @@
 
   // ---------- weekly boss ----------
   const BOSS_POOLS = {
-    STR:   { color:"#ff8a7a", names:["Iron Colossus","Obsidian Warden","Stonefang Berserker"] },
+    STR:   { color:"#ffa195", names:["Iron Colossus","Obsidian Warden","Stonefang Berserker"] },
     AGI:   { color:"#7ce0a0", names:["Gale Reaper","Twin-Fang Stalker","Storm Herald"] },
-    VIT:   { color:"#8fb8ff", names:["Eternal Sentinel","Abyss Tortoise","Chained Leviathan"] },
+    VIT:   { color:"#93bbff", names:["Eternal Sentinel","Abyss Tortoise","Chained Leviathan"] },
     MIXED: { color:"#f6c453", names:["Dungeon Overlord","The Monarch's Shade","Gatekeeper"] },
   };
   const BOSS_CATEGORIES = ["STR","AGI","VIT","MIXED"];
@@ -1552,11 +1553,12 @@
             const val = statPoints[cat]||0;
             const info = tierInfo(val);
             const fillPct = tierFillPct(val);
+            const displayFillPct = fillPct > 0 ? Math.max(fillPct, 3) : 0;
             const cls = cat.toLowerCase();
             const displayFrac = info.tier === 3 ? `${val} / MAX` : `${val} / ${info.cap}`;
             return `<div class="substat">
               <div class="substat-head"><span class="${cls}">${cat}${infoBtn(cls)} <em>TIER ${info.label}</em></span><b>${displayFrac}</b></div>
-              <div class="substat-bar"><div class="substat-fill ${cls} ${info.tier===3?'maxed':''}" style="width:${fillPct}%"></div></div>
+              <div class="substat-bar"><div class="substat-fill ${cls} ${info.tier===3?'maxed':''}" style="width:${displayFillPct}%"></div></div>
             </div>`;
           }).join("")}
         </div>
@@ -1584,7 +1586,7 @@
 
       <div class="panel" style="margin-top:18px;">
         <div class="eyebrow panel-eyebrow-row"><span class="eyebrow-label"><span class="dot"></span>FREELANCE QUEST</span><button class="panel-gear-btn" id="openExerciseMgrBtn" type="button" aria-label="Manage exercises" title="Manage exercises">⚙</button></div>
-        <p style="font-size:12px;color:var(--text-dim2);margin:-6px 0 14px;">Accept a contract above, or log anything off-board here — a different exercise, a soccer match, disc golf, whatever today calls for.</p>
+        <p style="font-size:13px;color:var(--text-dim2);margin:-6px 0 14px;">Accept a contract above, or log anything off-board here — a different exercise, a soccer match, disc golf, whatever today calls for.</p>
         ${!loggedToday ? `<div class="empty-note" style="margin-bottom:10px;">No quest logged today. The System is waiting.</div>` : `<div class="today-summary" style="margin-bottom:10px;">Today's quest: ${loggedToday.entries.map(e=>e.name).join(", ")} — ${loggedToday.totalXp} XP earned so far.</div>`}
 
         <div class="builder-row">
@@ -1613,7 +1615,7 @@
           <div class="panel">
             <h2 class="panel-title">PROGRESS<small>Stat Growth over time</small></h2>
             <div class="chart-head">
-              <span style="font-size:12px;color:var(--text-dim2);">Exercise</span>
+              <span style="font-size:13px;color:var(--text-dim2);">Exercise</span>
               <select id="chartSelect">${renderChartOptions()}</select>
             </div>
             ${renderProgressChart()}
@@ -1628,13 +1630,13 @@
 
       <div class="panel" style="margin-top:18px;">
         <div class="eyebrow"><span class="dot"></span>ACHIEVEMENTS</div>
-        <p style="font-size:12px;color:var(--text-dim2);margin:-6px 0 14px;">Unlock achievements to earn titles. Equip one to display it beside your name — and on your Guild Member Card.</p>
+        <p style="font-size:13px;color:var(--text-dim2);margin:-6px 0 14px;">Unlock achievements to earn titles. Equip one to display it beside your name — and on your Guild Member Card.</p>
         <div class="achievements-grid">${renderAchievements()}</div>
       </div>
 
       <div class="panel" style="margin-top:18px;">
         <div class="eyebrow"><span class="dot"></span>GUILD MEMBER CARD</div>
-        <p style="font-size:12px;color:var(--text-dim2);margin:-6px 0 14px;">Generate a shareable snapshot of your progress — level, rank, stats, and streak — as a downloadable image for Discord.</p>
+        <p style="font-size:13px;color:var(--text-dim2);margin:-6px 0 14px;">Generate a shareable snapshot of your progress — level, rank, stats, and streak — as a downloadable image for Discord.</p>
         <button class="btn primary" id="openCardBtn">🪪 Generate Card</button>
       </div>
 
@@ -1746,12 +1748,13 @@
       const done = todayTotalFor(id);
       const met = done >= target;
       const pct = Math.min(100, Math.round((done/target)*100));
+      const displayPct = pct > 0 ? Math.max(pct, 3) : 0;
       const unit = ex.type==="time" ? "sec" : ex.type==="minutes" ? "min" : "reps";
       const catColor = CONTRACT_COLORS[ex.category];
       return `
         <div class="penalty-row ${met ? "met" : ""}">
           <span class="penalty-ex-name"><span style="color:${catColor};">${ex.category}</span> ${ex.name}</span>
-          <div class="goal-progress-track penalty-track"><div class="goal-progress-fill" style="width:${pct}%; background:${met ? "var(--green)" : "var(--red)"};"></div></div>
+          <div class="goal-progress-track penalty-track"><div class="goal-progress-fill" style="width:${displayPct}%; background:${met ? "var(--green)" : "var(--red)"};"></div></div>
           <span class="penalty-target">${done} / ${target} ${unit} ${met ? "✓" : ""}</span>
         </div>
       `;
@@ -1862,6 +1865,7 @@
       const done = todayTotalFor(id);
       const cleared = done >= goal;
       const progressPct = Math.min(100, Math.round((done/goal)*100));
+      const displayProgressPct = progressPct > 0 ? Math.max(progressPct, 3) : 0;
       const unit = ex.type==="time" ? "sec" : ex.type==="minutes" ? "min" : "reps";
       const last = lastMap[id];
       const flavor = last ? `Not hunted in ${daysSinceLogged(last)} day${daysSinceLogged(last)===1?"":"s"}` : "New contract — never hunted";
@@ -1873,7 +1877,7 @@
           <div class="contract-name">${ex.name}</div>
           <div class="contract-target">Daily Goal: ${goal} ${unit}</div>
           <div class="goal-progress-row">
-            <div class="goal-progress-track"><div class="goal-progress-fill" style="width:${progressPct}%; background:${cleared ? "var(--green)" : catColor};"></div></div>
+            <div class="goal-progress-track"><div class="goal-progress-fill" style="width:${displayProgressPct}%; background:${cleared ? "var(--green)" : catColor};"></div></div>
             <span class="goal-progress-text">${done} / ${goal}</span>
           </div>
           <div class="contract-flavor">${flavor}</div>
@@ -2428,7 +2432,7 @@
 
     // STR / AGI / VIT — dynamically measured so labels never collide
     const stats = categoryPoints();
-    const statColors = { STR:"#ff8a7a", AGI:"#7ce0a0", VIT:"#8fb8ff" };
+    const statColors = { STR:"#ffa195", AGI:"#7ce0a0", VIT:"#93bbff" };
     let statY = barY + 70;
     ["STR","AGI","VIT"].forEach(cat=>{
       const val = stats[cat] || 0;
@@ -2705,7 +2709,7 @@
             <input type="file" id="importFileInput" accept="application/json,.json" style="display:none;" />
           </div>
           <div id="backupStatusMsg" class="avatar-status-msg"></div>
-          <div style="font-size:11px; color:var(--text-dim2); line-height:1.4; margin-top:4px;">Export downloads your full progress as a JSON file. Import restores from one — replacing whatever is currently saved. Useful for moving between devices or safeguarding a standalone (browser-saved) copy.</div>
+          <div style="font-size:12px; color:var(--text-dim2); line-height:1.4; margin-top:4px;">Export downloads your full progress as a JSON file. Import restores from one — replacing whatever is currently saved. Useful for moving between devices or safeguarding a standalone (browser-saved) copy.</div>
         </div>
         <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
           <button class="btn ghost" id="closeSettingsBtn">Cancel</button>
