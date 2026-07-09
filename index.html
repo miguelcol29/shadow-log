@@ -1,0 +1,3026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shadow Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #05070f;
+    --bg-glow: radial-gradient(ellipse 900px 500px at 50% -10%, rgba(79,195,247,0.10), transparent 60%);
+    --panel: #0c1226;
+    --panel-alt: #101838;
+    --border: rgba(94,169,255,0.28);
+    --border-strong: rgba(94,169,255,0.55);
+    --blue: #4fc3f7;
+    --blue-dim: #2b6f96;
+    --purple: #8b6bff;
+    --gold: #f6c453;
+    --green: #34d399;
+    --red: #f76b6b;
+    --text: #e7ecfb;
+    --text-dim: #8a94b8;
+    --text-mid: #a9b4d0;
+    --text-dim2: #5c6786;
+    --radius-cut: 14px;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background: var(--bg-glow), var(--bg);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    padding: 28px 18px 60px;
+    position: relative;
+    overflow-x: hidden;
+  }
+  body::before{
+    content:"";
+    position: fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(79,195,247,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,195,247,0.035) 1px, transparent 1px);
+    background-size: 42px 42px;
+    pointer-events: none;
+    z-index: 0;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black, transparent 75%);
+  }
+
+  /* ---------- Ambient particles ---------- */
+  .particle-field{
+    position: fixed; inset:0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .particle{
+    position: absolute;
+    bottom: -10px;
+    border-radius: 50%;
+    background: var(--blue);
+    box-shadow: 0 0 6px 1px rgba(79,195,247,0.8);
+    animation-name: drift-up;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+  @keyframes drift-up{
+    0%{ transform: translateY(0) translateX(0); opacity:0; }
+    8%{ opacity:1; }
+    92%{ opacity:1; }
+    100%{ transform: translateY(-105vh) translateX(24px); opacity:0; }
+  }
+
+  /* ---------- Scanline sweep ---------- */
+  .scanline{
+    position: fixed; left:0; right:0;
+    height: 140px;
+    top: -140px;
+    pointer-events: none;
+    z-index: 1;
+    background: linear-gradient(180deg, transparent, rgba(79,195,247,0.05), transparent);
+    animation: scan-sweep 9s linear infinite;
+  }
+  @keyframes scan-sweep{
+    0%{ top: -140px; }
+    100%{ top: 100vh; }
+  }
+
+  .levelup-flash{
+    position: fixed; inset:0; z-index: 55; pointer-events:none;
+    background: radial-gradient(circle at 50% 38%, rgba(79,195,247,0.55), rgba(139,107,255,0.18) 42%, transparent 72%);
+    animation: levelup-flash-anim 0.9s ease-out forwards;
+  }
+  @keyframes levelup-flash-anim{
+    0%{ opacity:0; }
+    15%{ opacity:1; }
+    100%{ opacity:0; }
+  }
+
+  .wrap{ max-width: 980px; margin: 0 auto; position: relative; z-index:1; }
+
+  ::selection{ background: rgba(79,195,247,0.35); }
+
+  button, select, input{ font-family: inherit; touch-action: manipulation; }
+  button{ cursor:pointer; }
+  :focus-visible{ outline: 2px solid var(--blue); outline-offset: 2px; }
+
+  /* ---------- Panel / signature "System Window" shell ---------- */
+  .panel{
+    background: linear-gradient(180deg, var(--panel), #0a0e20);
+    border: 1px solid var(--border);
+    clip-path: polygon(var(--radius-cut) 0, 100% 0, 100% calc(100% - var(--radius-cut)), calc(100% - var(--radius-cut)) 100%, 0 100%, 0 var(--radius-cut));
+    padding: 22px 24px;
+    position: relative;
+  }
+  .panel::before, .panel::after{
+    content:"";
+    position:absolute;
+    width: 20px; height: 20px;
+    pointer-events: none;
+    animation: corner-pulse 4s ease-in-out infinite;
+  }
+  .panel::before{
+    top:-1px; left:-1px;
+    border-top: 2px solid var(--blue);
+    border-left: 2px solid var(--blue);
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+    opacity: 0.9;
+  }
+  .panel::after{
+    bottom:-1px; right:-1px;
+    border-bottom: 2px solid var(--blue);
+    border-right: 2px solid var(--blue);
+    clip-path: polygon(100% 100%, 0 100%, 100% 0);
+    opacity: 0.9;
+    animation-delay: 2s;
+  }
+  @keyframes corner-pulse{
+    0%, 70%, 100%{ opacity: 0.9; filter: drop-shadow(0 0 0 transparent); }
+    85%{ opacity: 1; filter: drop-shadow(0 0 4px var(--blue)); }
+  }
+
+  .eyebrow{
+    font-family:'Orbitron', sans-serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--blue);
+    text-transform: uppercase;
+    display:flex; align-items:center; gap:8px;
+    margin-bottom: 14px;
+  }
+  .eyebrow .dot{ width:7px; height:7px; background: var(--blue); box-shadow: 0 0 8px var(--blue); transform: rotate(45deg); }
+  .panel-eyebrow-row{ justify-content:space-between; }
+  .eyebrow-label{ display:flex; align-items:center; gap:8px; }
+  .panel-gear-btn{
+    background:none;
+    border:1px solid var(--border);
+    color: var(--text-dim2);
+    width:24px; height:24px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px;
+    cursor:pointer;
+    transition: all .2s ease;
+    flex-shrink:0;
+  }
+  .panel-gear-btn:hover{ color: var(--blue); border-color: var(--border-strong); box-shadow: 0 0 8px rgba(79,195,247,0.3); transform: rotate(35deg); }
+
+  /* ---------- Header ---------- */
+  .title-block{ text-align:center; margin-bottom: 26px; }
+  .title-block h1{
+    font-family:'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: clamp(28px, 6vw, 44px);
+    letter-spacing: 6px;
+    margin: 0;
+    background: linear-gradient(180deg, #ffffff, var(--blue) 140%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 0 40px rgba(79,195,247,0.25);
+  }
+  .title-block p{
+    margin: 8px 0 0;
+    color: var(--text-dim2);
+    font-size: 14px;
+    letter-spacing: 1px;
+  }
+  .hunter-identity{
+    margin-top: 14px;
+    display:flex; align-items:center; justify-content:center;
+    gap: 14px;
+  }
+  .hunter-avatar-frame{
+    width: 60px; height: 60px;
+    flex-shrink: 0;
+    border: 2px solid var(--rank-color, var(--blue));
+    box-shadow: 0 0 14px var(--rank-color-glow, rgba(79,195,247,0.4));
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    background: rgba(255,255,255,0.03);
+    display:flex; align-items:center; justify-content:center;
+    overflow: hidden;
+  }
+  .hunter-avatar-frame img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .avatar-placeholder{ color: var(--text-dim2); font-size:26px; }
+  .hunter-name-display{
+    font-family:'Orbitron', sans-serif;
+    font-size: 15px;
+    letter-spacing: 1.5px;
+    color: var(--blue);
+    text-shadow: 0 0 8px rgba(79,195,247,0.4);
+  }
+  .hunter-name-col{ display:flex; flex-direction:column; align-items:flex-start; gap:3px; }
+  .hunter-title-display{
+    font-family:'Rajdhani', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--gold);
+    text-shadow: 0 0 8px rgba(246,196,83,0.4);
+  }
+
+  /* ---------- Penalty quest ---------- */
+  .penalty-panel{ border-color: rgba(247,107,107,0.5); }
+  .penalty-panel::before{ border-top-color: var(--red); border-left-color: var(--red); }
+  .penalty-panel::after{ border-bottom-color: var(--red); border-right-color: var(--red); }
+  .penalty-eyebrow{ color: var(--red); }
+  .penalty-dot{ background: var(--red) !important; box-shadow: 0 0 8px var(--red) !important; }
+  .penalty-warning{
+    font-size: 13px;
+    color: var(--text-mid);
+    line-height: 1.5;
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    background: rgba(247,107,107,0.06);
+    border-left: 3px solid var(--red);
+  }
+  .penalty-warning b{ color: var(--red); }
+  .penalty-rows{ display:flex; flex-direction:column; gap:10px; }
+  .penalty-row{ display:flex; align-items:center; gap:12px; font-size:13px; }
+  .penalty-ex-name{ flex-basis: 200px; flex-shrink:0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+  .penalty-ex-name span{ font-size:10px; letter-spacing:1.5px; margin-right:6px; }
+  .penalty-track{ flex:1; }
+  .penalty-target{ font-family:'JetBrains Mono', monospace; font-size:12px; color: var(--text-mid); flex-shrink:0; }
+  .penalty-row.met .penalty-target{ color: var(--green); }
+  .penalty-cleared-msg{ font-size:14px; color: var(--green); font-weight:600; letter-spacing:0.5px; text-shadow: 0 0 10px rgba(52,211,153,0.4); }
+  .penalty-cleared-msg b{ color:#fff; }
+  .penalty-panel.cleared{ border-color: rgba(52,211,153,0.5); }
+  .penalty-panel.cleared::before{ border-top-color: var(--green); border-left-color: var(--green); }
+  .penalty-panel.cleared::after{ border-bottom-color: var(--green); border-right-color: var(--green); }
+  .penalty-panel.cleared .penalty-eyebrow{ color: var(--green); }
+  .penalty-panel.cleared .penalty-dot{ background: var(--green) !important; box-shadow: 0 0 8px var(--green) !important; }
+  .penalty-restored-banner{ color: var(--green) !important; text-shadow: 0 0 12px rgba(52,211,153,0.5) !important; }
+  @media (max-width: 560px){
+    .penalty-row{ flex-wrap: wrap; }
+    .penalty-ex-name{ flex-basis: 100%; }
+  }
+
+  /* ---------- Weekly boss ---------- */
+  .boss-card{ display:flex; flex-direction:column; gap:12px; }
+  .boss-head{ display:flex; align-items:center; gap:14px; }
+  .boss-portrait-frame{
+    width:64px; height:64px;
+    flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    border: 2px solid var(--boss-color);
+    box-shadow: 0 0 12px var(--boss-color);
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    background: rgba(255,255,255,0.02);
+    overflow: hidden;
+  }
+  .boss-portrait-frame img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .boss-sigil{
+    font-size:30px; line-height:1;
+    color: var(--boss-color);
+    text-shadow: 0 0 16px var(--boss-color);
+    flex-shrink:0;
+  }
+  .boss-sigil-fallback{ display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
+  .boss-card.slain .boss-sigil{ color: var(--green); text-shadow: 0 0 16px rgba(52,211,153,0.6); }
+  .boss-card.slain .boss-portrait-frame{ border-color: var(--green); box-shadow: 0 0 12px rgba(52,211,153,0.6); filter: grayscale(0.4); }
+  .boss-id{ flex:1; min-width:0; }
+  .boss-name{ font-family:'Orbitron', sans-serif; font-size:17px; color:#fff; letter-spacing:1px; }
+  .boss-meta{ font-size:12px; color: var(--text-dim2); margin-top:3px; letter-spacing:0.5px; }
+  .boss-timer{ font-family:'JetBrains Mono', monospace; font-size:12px; color: var(--gold); flex-shrink:0; }
+  .boss-hp-track{
+    height:16px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    overflow:hidden;
+    border-radius: 3px;
+  }
+  .boss-hp-fill{
+    height:100%;
+    background: linear-gradient(90deg, #7a1f1f, var(--boss-color));
+    box-shadow: 0 0 12px var(--boss-color);
+    transition: width .6s cubic-bezier(.2,.8,.2,1);
+  }
+  .boss-hp-text{ font-family:'JetBrains Mono', monospace; font-size:12px; color: var(--text-mid); }
+  .boss-slain-stamp{ color: var(--green); font-weight:700; letter-spacing:0.5px; text-shadow: 0 0 8px rgba(52,211,153,0.4); }
+  .boss-damage-line{ color: var(--boss-color, #ff8a7a) !important; }
+  .boss-slain-banner{ color: var(--green) !important; text-shadow: 0 0 12px rgba(52,211,153,0.5) !important; }
+  .boss-log-row{
+    display:flex; align-items:center; gap:12px;
+    padding:7px 0;
+    font-size:12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-family:'JetBrains Mono', monospace;
+  }
+  .boss-log-row:last-child{ border-bottom:none; }
+  .boss-log-name{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:'Rajdhani', sans-serif; font-weight:700; font-size:13px; }
+  .boss-log-dealt{ color: var(--text-dim2); }
+  .boss-log-result.win{ color: var(--green); font-weight:700; }
+  .boss-log-result.loss{ color: var(--text-dim2); }
+  .boss-log-week{ color: var(--text-dim2); }
+
+  /* ---------- Achievements ---------- */
+  .achievements-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap:12px; }
+  .ach-summary{ grid-column: 1 / -1; font-family:'JetBrains Mono', monospace; font-size:12px; color: var(--text-dim2); }
+  .achievement-chip{
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+    padding: 12px 14px;
+    display:flex; flex-direction:column; gap:5px;
+  }
+  .achievement-chip.locked{ opacity: 0.45; }
+  .achievement-chip.unlocked{ border-color: rgba(246,196,83,0.45); }
+  .achievement-chip.equipped{ border-color: var(--gold); box-shadow: 0 0 12px rgba(246,196,83,0.25); }
+  .ach-head{ display:flex; align-items:center; gap:8px; }
+  .ach-icon{ font-size:14px; }
+  .ach-name{ font-family:'Orbitron', sans-serif; font-size:13px; color:#fff; }
+  .ach-title{ font-size:12px; color: var(--gold); font-weight:600; letter-spacing:0.5px; }
+  .ach-desc{ font-size:11px; color: var(--text-dim2); line-height:1.4; flex:1; }
+  .achievement-chip .btn{ margin-top:6px; align-self:flex-start; }
+  .ach-locked-note{ font-size:10px; letter-spacing:1.5px; color: var(--text-dim2); margin-top:6px; }
+  .achievement-unlock{ color: var(--gold) !important; }
+  .achievement-title-line{ display:block; font-family:'Rajdhani', sans-serif; font-size:13px; font-weight:600; margin-top:4px; letter-spacing:0.5px; }
+
+  .settings-btn{
+    position: fixed;
+    top: 16px; right: 16px;
+    z-index: 40;
+    width: 36px; height: 36px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: rgba(12,18,38,0.7);
+    color: var(--text-dim2);
+    font-size: 17px;
+    cursor: pointer;
+    transition: all .2s ease;
+    backdrop-filter: blur(4px);
+  }
+  .settings-btn:hover{ color: var(--blue); border-color: var(--border-strong); box-shadow: 0 0 12px rgba(79,195,247,0.3); transform: rotate(35deg); }
+
+  /* ---------- Player status panel ---------- */
+  .status-grid{
+    display:grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 20px 28px;
+    align-items:center;
+  }
+  .rank-badge{
+    font-family:'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 34px;
+    width: 64px; height: 64px;
+    display:flex; align-items:center; justify-content:center;
+    border: 2px solid var(--rank-color, var(--blue));
+    color: var(--rank-color, var(--blue));
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    text-shadow: 0 0 14px var(--rank-color, var(--blue));
+    box-shadow: inset 0 0 18px rgba(79,195,247,0.08);
+    flex-shrink:0;
+    animation: badge-breathe 3.2s ease-in-out infinite;
+  }
+  @keyframes badge-breathe{
+    0%, 100%{ box-shadow: inset 0 0 18px rgba(79,195,247,0.08), 0 0 6px var(--rank-color, var(--blue)); }
+    50%{ box-shadow: inset 0 0 18px rgba(79,195,247,0.08), 0 0 20px var(--rank-color, var(--blue)); }
+  }
+  .level-info{ min-width: 0; }
+  .level-row{
+    display:flex; align-items:baseline; gap:12px; margin-bottom:8px; flex-wrap:wrap;
+  }
+  .level-row .lv{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 22px; font-weight:700; color:#fff;
+  }
+  .level-row .lv span{ color: var(--blue); }
+  .level-row .rank-label{ font-size:13px; color:var(--text-dim2); letter-spacing:1px; }
+  .xp-bar-track{
+    height: 10px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    position:relative;
+    overflow:hidden;
+  }
+  .xp-bar-fill{
+    height:100%;
+    background: linear-gradient(90deg, var(--blue-dim), var(--blue));
+    box-shadow: 0 0 12px rgba(79,195,247,0.6);
+    transition: width 0.6s cubic-bezier(.2,.8,.2,1);
+    width:0%;
+    position: relative;
+    overflow: hidden;
+  }
+  .xp-bar-fill::after{
+    content:"";
+    position:absolute; inset:0;
+    background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.55) 48%, transparent 66%);
+    background-size: 60% 100%;
+    animation: shimmer-sweep 2.6s linear infinite;
+  }
+  @keyframes shimmer-sweep{
+    0%{ background-position: -80% 0; }
+    100%{ background-position: 180% 0; }
+  }
+  .xp-text{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--text-dim2);
+    margin-top:6px; letter-spacing: 0.5px;
+  }
+  .streak-block{ text-align:center; flex-shrink:0; }
+  .streak-num{
+    font-family:'Orbitron', sans-serif;
+    font-size: 30px; font-weight:700; color: var(--gold);
+    line-height:1;
+    text-shadow: 0 0 14px rgba(246,196,83,0.4);
+  }
+  .streak-label{ font-size:11px; color: var(--text-dim2); letter-spacing:2px; margin-top:4px; }
+  .streak-bonus{ font-family:'JetBrains Mono', monospace; font-size:11px; color: var(--green); margin-top:4px; }
+  .grace-status{ font-size:10px; color: var(--text-dim2); margin-top:4px; letter-spacing:0.5px; }
+
+  /* ---------- Stats row ---------- */
+  .substats{
+    display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; margin-top:22px;
+  }
+  .substat{ }
+  .substat-head{ display:flex; justify-content:space-between; font-size:12px; letter-spacing:1.5px; margin-bottom:6px; }
+  .substat-head b{ font-family:'JetBrains Mono', monospace; font-size:12px; font-weight:500; color: var(--text-mid); }
+  .substat-head em{ font-style:normal; font-size:10px; color: var(--text-dim2); letter-spacing:1px; margin-left:6px; }
+
+  /* ---------- Info bubbles ---------- */
+  .info-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:15px; height:15px;
+    border-radius:50%;
+    border: 1px solid var(--text-dim2);
+    color: var(--text-dim2);
+    background: transparent;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px; font-weight:700;
+    line-height:1;
+    padding:0;
+    margin-left:6px;
+    vertical-align:middle;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .info-btn:hover, .info-btn.active{ border-color: var(--blue); color: var(--blue); box-shadow: 0 0 6px rgba(79,195,247,0.4); }
+  .info-popover{
+    position: fixed;
+    z-index: 60;
+    max-width: 260px;
+    background: linear-gradient(180deg, #0d1530, #070a18);
+    border: 1px solid var(--blue);
+    box-shadow: 0 0 24px rgba(79,195,247,0.2);
+    padding: 12px 14px;
+    font-size: 12px;
+    line-height:1.5;
+    color: var(--text-mid);
+    display: none;
+    clip-path: polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  }
+  .info-popover.show{ display:block; }
+  .info-popover .info-title{
+    font-family:'Orbitron', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--blue);
+    margin-bottom: 6px;
+  }
+  .substat-bar{ height:6px; background:rgba(255,255,255,0.05); border:1px solid var(--border); overflow:hidden; }
+  .substat-fill{ height:100%; transition: width .5s ease; }
+  .substat-fill.maxed{ box-shadow: 0 0 8px currentColor; }
+  .substat .str{ color:#ff8a7a; } .substat-fill.str{ background: linear-gradient(90deg,#a13f34,#ff8a7a); }
+  .substat .agi{ color:#7ce0a0; } .substat-fill.agi{ background: linear-gradient(90deg,#1f6b45,#7ce0a0); }
+  .substat .vit{ color:#8fb8ff; } .substat-fill.vit{ background: linear-gradient(90deg,#2c4f96,#8fb8ff); }
+
+  /* ---------- Grid layout ---------- */
+  .grid-2{ display:grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+  @media (max-width: 760px){ .grid-2{ grid-template-columns: 1fr; } }
+  .stack{ display:flex; flex-direction:column; gap:18px; margin-top:18px; }
+
+  h2.panel-title{
+    font-family:'Orbitron', sans-serif;
+    font-size: 15px;
+    letter-spacing: 2px;
+    margin: 0 0 16px;
+    color: #fff;
+  }
+  h2.panel-title small{ display:block; font-family:'Rajdhani',sans-serif; font-weight:500; font-size:12px; color:var(--text-dim2); letter-spacing:0.5px; margin-top:3px; }
+
+  /* ---------- Quest builder ---------- */
+  .builder-row{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  select, .num-input{
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  select{
+    flex:1; min-width: 160px;
+    appearance: none; -webkit-appearance: none; -moz-appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--blue) 50%), linear-gradient(135deg, var(--blue) 50%, transparent 50%);
+    background-position: calc(100% - 18px) center, calc(100% - 12px) center;
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+    padding-right: 32px;
+  }
+  select option, select optgroup{
+    background: #0d1428;
+    color: var(--text);
+  }
+  select option:checked, select option:hover{
+    background: #16264d;
+  }
+  select optgroup{
+    color: var(--blue);
+    font-weight: 700;
+    font-style: normal;
+  }
+  .num-input{ width: 90px; }
+  .btn{
+    background: rgba(79,195,247,0.08);
+    border: 1px solid var(--border-strong);
+    color: var(--blue);
+    padding: 10px 18px;
+    font-weight:700;
+    letter-spacing: 1px;
+    font-size: 13px;
+    text-transform: uppercase;
+    transition: all .15s ease;
+    clip-path: polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  }
+  .btn:hover{ background: rgba(79,195,247,0.18); box-shadow: 0 0 16px rgba(79,195,247,0.25); }
+  .btn.primary{ background: linear-gradient(90deg, rgba(79,195,247,0.25), rgba(139,107,255,0.25)); color:#fff; }
+  .btn.primary:hover{ box-shadow: 0 0 20px rgba(139,107,255,0.35); }
+  .btn.ghost{ background:transparent; color: var(--text-dim2); border-color: var(--border); font-weight:600; }
+  .btn.small{ padding:6px 12px; font-size:11px; }
+  .btn:disabled{ opacity:0.35; cursor:not-allowed; box-shadow:none; }
+
+  .builder-pills{ display:flex; flex-direction:column; gap:8px; margin-bottom: 16px; }
+  .empty-note{ color: var(--text-dim2); font-size: 13px; font-style: italic; padding: 6px 0; }
+  .pill-row{
+    display:flex; align-items:center; gap:10px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  .pill-row .name{ font-weight:700; flex:1; }
+  .pill-row .cat{ font-size:10px; letter-spacing:1px; color: var(--text-dim2); border:1px solid var(--border); padding:2px 6px; }
+  .pill-row .sets{ font-family:'JetBrains Mono', monospace; color: var(--blue); font-size:12px; }
+  .pill-row .remove{ background:none; border:none; color: var(--red); font-size:16px; line-height:1; padding:0 4px; }
+
+  .toggle-custom{ font-size:12px; color: var(--text-dim2); text-decoration: underline; background:none; border:none; padding:0; margin-bottom:12px; letter-spacing:0.5px; }
+  .custom-form{ display:none; gap:10px; flex-wrap:wrap; margin-bottom:14px; padding:12px; background: rgba(255,255,255,0.02); border:1px dashed var(--border); }
+  .custom-form.open{ display:flex; }
+  .custom-form input[type=text]{ flex:1; min-width:140px; }
+
+  .exercise-manager{ display:none; flex-direction:column; gap:14px; margin-bottom:14px; padding:12px; background: rgba(255,255,255,0.02); border:1px dashed var(--border); }
+  .exercise-manager.open{ display:flex; }
+  .ex-mgr-cat{ font-size:11px; letter-spacing:1.5px; color: var(--text-dim2); margin-bottom:6px; }
+  .ex-mgr-row{ display:flex; align-items:center; justify-content:space-between; padding:5px 0; font-size:13px; }
+  .ex-mgr-row.is-hidden span{ color: var(--text-dim2); text-decoration: line-through; }
+  .ex-mgr-row .btn{ margin-top:0; }
+  .ex-mgr-note{ font-size:11px; color: var(--text-dim2); line-height:1.4; }
+
+  /* ---------- Job board ---------- */
+  .board-head{ display:flex; justify-content:space-between; align-items:flex-end; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  .board-type{ font-family:'Orbitron', sans-serif; font-size:16px; letter-spacing:1.5px; text-shadow: 0 0 10px currentColor; }
+  .board-sub{ font-size:11px; color: var(--text-dim2); letter-spacing:1px; margin-top:3px; }
+  .gate-select-row{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px; padding-bottom:14px; border-bottom:1px dashed var(--border); }
+  .gate-select-label{ font-size:10px; letter-spacing:2px; color: var(--text-dim2); flex-shrink:0; }
+  .gate-pills{ display:flex; gap:6px; }
+  .gate-pill{
+    width:28px; height:28px;
+    border-radius:50%;
+    border: 1px solid var(--gate-color, var(--border));
+    background: transparent;
+    color: var(--gate-color, var(--text-dim2));
+    font-family:'Orbitron', sans-serif;
+    font-size:12px; font-weight:700;
+    cursor:pointer;
+    transition: all .15s ease;
+  }
+  .gate-pill:hover{ box-shadow: 0 0 8px var(--gate-color, var(--blue)); }
+  .gate-pill.active{ background: var(--gate-color, var(--blue)); color:#05070f; box-shadow: 0 0 12px var(--gate-color, var(--blue)); }
+  .board-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; }
+  .contract-card{
+    background: rgba(255,255,255,0.02);
+    border: 1px dashed var(--cat-color, var(--border));
+    padding: 14px;
+    position: relative;
+    display:flex; flex-direction:column; gap:4px;
+  }
+  .contract-card.accepted{ opacity: 0.7; border-style: solid; animation: accepted-glow 3s ease-in-out infinite; }
+  @keyframes accepted-glow{
+    0%, 100%{ box-shadow: 0 0 0 rgba(52,211,153,0); }
+    50%{ box-shadow: 0 0 14px rgba(52,211,153,0.35); }
+  }
+  .contract-cat{ font-size:10px; letter-spacing:2px; font-weight:700; }
+  .contract-name{ font-family:'Orbitron', sans-serif; font-size:14px; color:#fff; margin-bottom:2px; }
+  .contract-target{ font-family:'JetBrains Mono', monospace; font-size:12px; color: var(--text-mid); }
+  .contract-flavor{ font-size:11px; color: var(--text-dim2); font-style:italic; margin-bottom:8px; }
+  .contract-card .btn{ align-self:flex-start; }
+  .contract-accepted{ font-family:'JetBrains Mono', monospace; font-size:12px; color: var(--green); letter-spacing:1px; }
+  .contract-cleared{ font-family:'Orbitron', sans-serif; font-size:12px; color: var(--green); letter-spacing:1.5px; text-shadow: 0 0 10px rgba(52,211,153,0.5); }
+  .contract-card.cleared{ border-style: solid; border-color: var(--green); opacity:1; }
+  .goal-progress-row{ display:flex; align-items:center; gap:8px; margin:2px 0 4px; }
+  .goal-progress-track{ flex:1; height:6px; background: rgba(0,0,0,0.4); border-radius:3px; overflow:hidden; }
+  .goal-progress-fill{ height:100%; border-radius:3px; transition: width .4s ease; }
+  .goal-progress-text{ font-family:'JetBrains Mono', monospace; font-size:11px; color: var(--text-mid); flex-shrink:0; }
+  .ex-mgr-name{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ex-mgr-goal{ display:flex; align-items:center; gap:5px; flex-shrink:0; }
+  .ex-mgr-goal-input{
+    width:58px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 6px;
+    font-size: 12px;
+    font-family:'JetBrains Mono', monospace;
+  }
+  .ex-mgr-unit{ font-size:10px; color: var(--text-dim2); }
+  .ex-mgr-row{ gap:10px; }
+  .roster-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 0; font-size:13px; }
+  .roster-row select{ min-width: 150px; flex:none; }
+
+  .today-summary{ margin-top: 6px; font-size: 12px; color: var(--text-dim2); font-family:'JetBrains Mono', monospace; }
+
+  /* ---------- Heatmap ---------- */
+  .heatmap-wrap{ overflow-x:auto; padding-bottom: 4px; }
+  .heatmap{ display:grid; grid-auto-flow:column; grid-template-rows: repeat(7, 12px); gap:3px; width:max-content; }
+  .hm-cell{ width:12px; height:12px; background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.03); }
+  .hm-cell.logged{ background: var(--blue); box-shadow: 0 0 6px rgba(79,195,247,0.6); }
+  .hm-cell.today{ outline: 1px solid var(--gold); }
+  .heatmap-legend{ display:flex; align-items:center; gap:6px; margin-top:10px; font-size:10px; color:var(--text-dim2); flex-wrap:wrap; }
+  .heatmap-legend .hm-cell{ width:10px; height:10px; }
+
+  /* ---------- Progress chart ---------- */
+  .chart-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+  .chart-caption{ font-size:11px; color: var(--text-dim2); margin-bottom:8px; line-height:1.4; }
+  .chart-head select{ min-width: 140px; flex:none; }
+  svg.progress-svg{ width:100%; height:170px; overflow:visible; }
+  .no-data{ color: var(--text-dim2); font-size:13px; font-style:italic; padding: 40px 0; text-align:center; }
+
+  /* ---------- History ---------- */
+  .history-list{ display:flex; flex-direction:column; gap:10px; max-height: 320px; overflow-y:auto; padding-right:4px; }
+  .history-list::-webkit-scrollbar{ width:6px; }
+  .history-list::-webkit-scrollbar-thumb{ background: var(--border-strong); }
+  .hist-entry{ border:1px solid var(--border); background: rgba(255,255,255,0.015); padding:10px 14px; }
+  .hist-entry .hd{ display:flex; justify-content:space-between; align-items:center; font-size:12px; color: var(--text-dim2); font-family:'JetBrains Mono', monospace; margin-bottom:6px; }
+  .hist-entry .hd .xp{ color: var(--green); }
+  .hist-entry .hd-right{ display:flex; align-items:center; gap:10px; }
+  .remove-log{
+    background:none; border:none; color: var(--text-dim2);
+    font-size:13px; line-height:1; padding:2px 4px; cursor:pointer;
+    transition: color .15s ease;
+  }
+  .remove-log:hover{ color: var(--red); }
+  .hist-entry .items{ font-size:13px; color: var(--text-mid); line-height:1.5; }
+  .hist-entry .items b{ color:#fff; }
+
+  /* ---------- System popup (signature moment) ---------- */
+  .overlay{
+    position: fixed; inset:0; background: rgba(3,5,12,0.75);
+    display:flex; align-items:center; justify-content:center;
+    z-index: 50; opacity:0; pointer-events:none; transition: opacity .25s ease;
+  }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+  .sys-window{
+    background: linear-gradient(180deg, #0d1530, #070a18);
+    border: 1px solid var(--blue);
+    box-shadow: 0 0 60px rgba(79,195,247,0.25), inset 0 0 30px rgba(79,195,247,0.05);
+    clip-path: polygon(20px 0,100% 0,100% calc(100% - 20px),calc(100% - 20px) 100%,0 100%,0 20px);
+    padding: 34px 40px;
+    max-width: 380px;
+    text-align:center;
+    transform: scale(0.92);
+    transition: transform .25s ease;
+  }
+  .overlay.show .sys-window{ transform: scale(1); }
+  .sys-window .tag{ font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:4px; color:var(--blue); margin-bottom:10px; }
+  .sys-window h3{ font-family:'Orbitron',sans-serif; font-size:22px; margin:0 0 14px; color:#fff; letter-spacing:1px; }
+  .sys-window .line{ font-size:14px; color: var(--text-mid); margin-bottom:6px; }
+  .sys-window .line b{ color: var(--gold); }
+  .sys-window .rankup{ margin-top:14px; padding-top:14px; border-top:1px solid var(--border); font-family:'Orbitron',sans-serif; font-size:16px; color: var(--gold); text-shadow:0 0 12px rgba(246,196,83,0.5); }
+  .sys-window button{ margin-top: 20px; }
+
+  .card-window{ max-width: 820px; width: 94vw; text-align:left; }
+  .card-window h3{ text-align:center; }
+  .card-window .tag{ text-align:center; }
+  .guild-card-canvas{ width:100%; height:auto; display:block; border:1px solid var(--border); }
+  .card-actions{ display:flex; gap:10px; justify-content:center; margin-top:16px; flex-wrap:wrap; }
+  .card-actions button{ margin-top:0; }
+  .card-hint{ font-size:11px; color: var(--text-dim2); text-align:center; margin-top:12px; line-height:1.4; }
+  .settings-input{
+    width:100%;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600;
+  }
+  .avatar-settings-row{ display:flex; align-items:center; gap:14px; }
+  .avatar-preview-frame{ width:64px; height:64px; }
+  .avatar-preview-frame .avatar-placeholder{ font-size:28px; }
+  .avatar-settings-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .avatar-settings-actions .btn{ margin-top:0; }
+  .avatar-status-msg{ font-size:11px; color: var(--text-dim2); margin-top:8px; min-height:14px; }
+
+  /* ---------- Footer ---------- */
+  .footer{ text-align:center; margin-top: 30px; }
+  .storage-mode-note{ font-size:11px; color: var(--text-dim2); letter-spacing:0.5px; margin-bottom:12px; }
+  .sync-status{ font-family:'JetBrains Mono', monospace; font-size:11px; margin-bottom:10px; min-height:14px; letter-spacing:0.5px; }
+  .sync-status.saving{ color: var(--text-dim2); }
+  .sync-status.retrying{ color: var(--gold); }
+  .sync-status.stalled{ color: var(--red); }
+  .footer button{ font-size:11px; }
+
+  .loading-screen{ text-align:center; padding: 100px 20px; color: var(--text-dim2); font-family:'JetBrains Mono', monospace; letter-spacing:1px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition: none !important; animation: none !important; }
+  }
+
+  @media (max-width: 560px){
+    .status-grid{ grid-template-columns: auto 1fr; }
+    .streak-block{ grid-column: 1 / -1; display:flex; align-items:center; gap:10px; justify-content:flex-start; }
+    .substats{ grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="particle-field" id="particleField" aria-hidden="true"></div>
+<div class="scanline" aria-hidden="true"></div>
+<button class="settings-btn" id="settingsBtn" type="button" aria-label="Settings">⚙</button>
+<div class="wrap" id="app">
+  <div class="loading-screen">▸ CONNECTING TO SYSTEM…</div>
+</div>
+
+<script>
+  (function(){
+    "use strict";
+    const field = document.getElementById("particleField");
+    if(field){
+      const COUNT = 22;
+      for(let i=0;i<COUNT;i++){
+        const p = document.createElement("div");
+        p.className = "particle";
+        p.style.left = (Math.random()*100) + "vw";
+        p.style.animationDelay = (Math.random()*14) + "s";
+        p.style.animationDuration = (12 + Math.random()*10) + "s";
+        p.style.opacity = (0.15 + Math.random()*0.35).toFixed(2);
+        const size = (1.5 + Math.random()*2).toFixed(1);
+        p.style.width = size + "px";
+        p.style.height = size + "px";
+        field.appendChild(p);
+      }
+    }
+  })();
+</script>
+
+<script>
+(function(){
+  "use strict";
+
+  const STORAGE_KEY = "shadowlog-state";
+
+  // Claude's artifact storage only exists inside Claude. When this file is opened
+  // standalone (e.g. hosted on GitHub Pages, or double-clicked locally), fall back
+  // to localStorage so progress still saves — just scoped to this browser/device.
+  const HAS_CLAUDE_STORAGE = (typeof window !== "undefined") && !!window.storage && typeof window.storage.get === "function";
+  const IS_STANDALONE = !HAS_CLAUDE_STORAGE;
+
+  async function storageGet(key){
+    if(HAS_CLAUDE_STORAGE) return window.storage.get(key, false);
+    const raw = localStorage.getItem(key);
+    if(raw === null) throw new Error("No local data for " + key);
+    return { key, value: raw, shared:false };
+  }
+  async function storageSet(key, value){
+    if(HAS_CLAUDE_STORAGE) return window.storage.set(key, value, false);
+    localStorage.setItem(key, value);
+    return { key, value, shared:false };
+  }
+
+  const DEFAULT_EXERCISES = [
+    {id:"pushups", name:"Push-Ups", category:"STR", type:"reps"},
+    {id:"pullups", name:"Pull-Ups", category:"STR", type:"reps"},
+    {id:"dips", name:"Dips", category:"STR", type:"reps"},
+    {id:"rows", name:"Bodyweight Rows", category:"STR", type:"reps"},
+    {id:"squats", name:"Squats", category:"AGI", type:"reps"},
+    {id:"lunges", name:"Lunges", category:"AGI", type:"reps"},
+    {id:"burpees", name:"Burpees", category:"AGI", type:"reps"},
+    {id:"mtnclimbers", name:"Mountain Climbers", category:"AGI", type:"reps"},
+    {id:"plank", name:"Plank", category:"VIT", type:"time"},
+    {id:"handstand", name:"Handstand Hold", category:"VIT", type:"time"},
+    {id:"legraises", name:"Leg Raises", category:"VIT", type:"reps"},
+    {id:"situps", name:"Sit-Ups", category:"VIT", type:"reps"},
+    {id:"jogging", name:"Jogging", category:"AGI", type:"minutes"},
+  ];
+
+  const CATEGORY_LABEL = { STR:"Strength — Push, Pull, Press", AGI:"Agility — Speed & Power", VIT:"Vitality — Endurance & Core" };
+  const RANK_COLORS = { E:"#aab6dd", D:"#4fc3f7", C:"#34d399", B:"#8b6bff", A:"#ff8a5c", S:"#f6c453" };
+
+  const CONTRACT_LABELS = { STR:"Strength Contract", AGI:"Agility Contract", VIT:"Vitality Contract", FULL:"Full Hunt", REST:"Guild Holiday" };
+  const CONTRACT_COLORS = { STR:"#ff8a7a", AGI:"#7ce0a0", VIT:"#8fb8ff", FULL:"#f6c453", REST:"#7a86a8" };
+  const RANK_ORDER = ["E","D","C","B","A","S"];
+  const SYNC_STATUS_TEXT = { idle:"", saving:"◆ Saving…", retrying:"⚠ Connection hiccup — retrying save…", stalled:"⚠ Not saving right now — your progress is safe on screen, but reload will lose it." };
+  const GATE_TARGETS = {
+    reps:    { E:12, D:15, C:18, B:22, A:26, S:30 },
+    time:    { E:20, D:25, C:30, B:37, A:43, S:50 },
+    minutes: { E:10, D:13, C:15, B:18, A:22, S:25 },
+  };
+  // Custom daily goal (base, at E-Gate) for an exercise, falling back to the default table.
+  function baseGoalFor(ex){
+    const g = state.dailyGoals && state.dailyGoals[ex.id];
+    if(typeof g === "number" && g > 0) return g;
+    const table = GATE_TARGETS[ex.type] || GATE_TARGETS.reps;
+    return table.E;
+  }
+  // Scales the base goal by the same ratio the default table uses between ranks,
+  // so a custom 50-rep E-Gate goal becomes ~104 at D, ~458 at S, etc.
+  function gateScaledGoal(ex, gateRank){
+    const table = GATE_TARGETS[ex.type] || GATE_TARGETS.reps;
+    const mult = (table[gateRank] || table.E) / table.E;
+    return Math.max(1, Math.round(baseGoalFor(ex) * mult));
+  }
+  // Cumulative amount logged today for an exercise (sum across all sets/quests).
+  function todayTotalFor(exId){
+    const log = (state.logs||[]).find(l=>l.date===todayStr());
+    if(!log) return 0;
+    const entry = log.entries.find(e=>e.id===exId);
+    return entry ? entry.sets.reduce((a,c)=>a+c,0) : 0;
+  }
+  const DEFAULT_ROSTER = { 0:"REST", 1:"STR", 2:"AGI", 3:"VIT", 4:"FULL", 5:"STR", 6:"AGI" };
+  const WEEKDAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+
+  const INFO_CONTENT = {
+    level: { title:"LEVEL", text:"Every rep, second held, or minute logged earns XP. Fill the XP bar to level up. XP needed for the next level = round(55 × level^1.55), so each level takes progressively more than the last." },
+    rank: { title:"RANK", text:"Rank is just a badge tied to your level, not a separate track: E (1–9), D (10–19), C (20–29), B (30–39), A (40–49), S (50+). Leveling up is what moves your rank." },
+    xp: { title:"XP", text:"Base XP per set: 1 XP/rep, 0.4 XP/second held (planks, holds), 3 XP/minute of cardio. Your current Hunt Streak bonus (up to +25%) is added on top of every quest's XP. Total fills the bar toward your next level; leftover carries into the new bar after a level-up." },
+    str: { title:"STR", text:"Counts distinct Strength exercises you've logged — 1 point per exercise per day (2 different STR moves in one day = 2 points). Tier I: 0–100. Tier II: 100–1000, progress carries over. Tier MAX once you pass 1000, no further cap." },
+    agi: { title:"AGI", text:"Counts distinct Agility exercises you've logged — 1 point per exercise per day (2 different AGI moves in one day = 2 points). Tier I: 0–100. Tier II: 100–1000, progress carries over. Tier MAX once you pass 1000, no further cap." },
+    vit: { title:"VIT", text:"Counts distinct Vitality exercises you've logged — 1 point per exercise per day (2 different VIT moves in one day = 2 points). Tier I: 0–100. Tier II: 100–1000, progress carries over. Tier MAX once you pass 1000, no further cap." },
+    streak: { title:"HUNT STREAK", text:"Counts consecutive days you've logged a quest. Logging today after logging yesterday adds 1. You also get 1 Rest Day of grace per rolling 7-day period — miss a single day and your streak still carries through, no XP or progress lost. Miss 2+ days in a row, or use your Rest Day again before it recharges, and the streak resets to 1 — though if the broken streak was 3+ days, the System may offer a Penalty Quest to restore it. Every streak day adds +1% bonus XP to that day's quests, capped at +25%." },
+    penalty: { title:"PENALTY QUEST", text:"When a streak of 3+ days breaks past your grace day, the System offers one same-day trial: clear all three listed exercises at 1.5× their gate-scaled daily goals before midnight. Succeed and your full streak is restored (plus today) — with its XP bonus applying immediately. Fail and the trial silently expires; your streak stays broken but nothing else is lost. The offer appears at most once per 14 days." },
+    gate: { title:"GATE RANK", text:"Scales your Daily Goals on the Job Board, like gate ranks in the show. Each exercise has a base goal (your E-Gate baseline — customizable via the ⚙ icon on the Freelance Quest panel); higher gates multiply it — D is 1.25×, C is 1.5×, up to 2.5× at S-Gate. Goals are cumulative for the day — every set you log counts toward them, and the board tracks your progress live. Gate Rank defaults to your Hunter Rank but you can raise or lower it any time." },
+    boss: { title:"WEEKLY BOSS", text:"A boss spawns every Monday with HP set to 15% above your average weekly XP from the last 3 weeks (with a minimum floor based on your Gate Rank, locked at spawn). Every XP you earn Monday–Sunday deals that much damage — streak bonuses included. Deplete its HP before the week ends to slay it and claim a bounty worth 20% of its HP. If it survives, it escapes — no penalty, just a mark in your Boss Log. Slain bosses stay slain, even if you later remove logged days." },
+  };
+  function infoBtn(key){
+    return `<button class="info-btn" type="button" data-info-key="${key}" aria-label="How ${key.toUpperCase()} works">i</button>`;
+  }
+
+  let state = null;
+  let builder = []; // [{id,name,category,type,sets:[]}]
+  let selectedChartId = null;
+  let rosterFormOpen = false;
+  let acceptedContractIds = new Set();
+  let bossLogOpen = false;
+
+  // ---------- date helpers ----------
+  function todayStr(){
+    const d = new Date();
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  }
+  function addDays(dateStr, n){
+    const d = new Date(dateStr+"T00:00:00");
+    d.setDate(d.getDate()+n);
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  }
+  function daysBetween(a,b){
+    const da = new Date(a+"T00:00:00"), db = new Date(b+"T00:00:00");
+    return Math.round((db-da)/86400000);
+  }
+  function fmtDate(dateStr){
+    const d = new Date(dateStr+"T00:00:00");
+    return d.toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  }
+  const GRACE_WINDOW_DAYS = 7;
+  // Determines whether a streak survives the gap between lastLogDate and today.
+  // Allows exactly one missed day, usable at most once per rolling 7-day window.
+  function checkStreakGrace(lastLogDate, today){
+    if(!lastLogDate) return {continued:false, usedGrace:false, missedDate:null};
+    if(lastLogDate === today) return {continued:true, usedGrace:false, missedDate:null};
+    const gap = daysBetween(lastLogDate, today);
+    if(gap === 1) return {continued:true, usedGrace:false, missedDate:null};
+    if(gap === 2){
+      const missedDate = addDays(lastLogDate, 1);
+      const lastGraceUse = state.grace && state.grace.lastUsedDate;
+      const graceAvailable = !lastGraceUse || daysBetween(lastGraceUse, missedDate) >= GRACE_WINDOW_DAYS;
+      if(graceAvailable) return {continued:true, usedGrace:true, missedDate};
+    }
+    return {continued:false, usedGrace:false, missedDate:null};
+  }
+  function isGraceAvailable(today){
+    const lastGraceUse = state.grace && state.grace.lastUsedDate;
+    return !lastGraceUse || daysBetween(lastGraceUse, today) >= GRACE_WINDOW_DAYS;
+  }
+
+  // ---------- state helpers ----------
+  function defaultState(){
+    return { level:1, xp:0, streak:0, lastLogDate:null, logs:[], customExercises:[], roster: Object.assign({}, DEFAULT_ROSTER), board: null, grace: { lastUsedDate: null }, gateRank: null, hunterName:"", hunterId:null, hunterAvatar:null, hiddenExerciseIds:[], dailyGoals:{}, achievements:{}, equippedTitle:null, counters:{ goalsCleared:0, sGateGoalClears:0, bossesSlain:0, penaltiesCleared:0 }, weeklyBoss:null, bossHistory:[], penalty:{ lastOfferedDate:null, active:null } };
+  }
+  function allExercises(){
+    return DEFAULT_EXERCISES.concat(state.customExercises || []);
+  }
+  // Exercises available for picking (dropdown, job board). Hidden ones are excluded here
+  // but allExercises() still resolves them by id for history/chart lookups of past logs.
+  function visibleExercises(){
+    const hidden = state.hiddenExerciseIds || [];
+    return allExercises().filter(e=>hidden.indexOf(e.id)===-1);
+  }
+  function xpToNext(level){ return Math.round(55 * Math.pow(level, 1.55)); }
+  function rankFor(level){
+    if(level<10) return "E";
+    if(level<20) return "D";
+    if(level<30) return "C";
+    if(level<40) return "B";
+    if(level<50) return "A";
+    return "S";
+  }
+  function categoryPoints(){
+    const totals = {STR:0, AGI:0, VIT:0};
+    (state.logs||[]).forEach(log=>{
+      (log.entries||[]).forEach(e=>{ totals[e.category] = (totals[e.category]||0) + 1; });
+    });
+    return totals;
+  }
+  function tierInfo(points){
+    if(points < 100) return {tier:1, label:"I", cap:100, floor:0};
+    if(points < 1000) return {tier:2, label:"II", cap:1000, floor:100};
+    return {tier:3, label:"MAX", cap:1000, floor:100};
+  }
+  function tierFillPct(points){
+    const info = tierInfo(points);
+    if(info.tier === 3) return 100;
+    return Math.min(100, (points/info.cap)*100);
+  }
+
+  // ---------- job board ----------
+  function todayWeekday(){ return new Date().getDay(); }
+
+  function lastLoggedMap(){
+    const map = {};
+    const sorted = (state.logs||[]).slice().sort((a,b)=> a.date<b.date?-1:1);
+    sorted.forEach(log=>{
+      log.entries.forEach(e=>{ map[e.id] = log.date; });
+    });
+    return map;
+  }
+  function daysSinceLogged(dateStr){ return dateStr ? daysBetween(dateStr, todayStr()) : Infinity; }
+
+  function contractPool(category){ return visibleExercises().filter(e=>e.category===category); }
+
+  function pickForCategory(category, count, excludeIds, lastMap){
+    let pool = contractPool(category).filter(e=>excludeIds.indexOf(e.id)===-1);
+    if(pool.length < count) pool = contractPool(category);
+    pool = pool.slice().sort((a,b)=>{
+      const da = daysSinceLogged(lastMap[a.id]), db = daysSinceLogged(lastMap[b.id]);
+      if(da===db) return 0;
+      return db-da;
+    });
+    return pool.slice(0, count);
+  }
+
+  function generateBoard(excludeIds){
+    const type = state.roster[todayWeekday()];
+    const lastMap = lastLoggedMap();
+    let ids = [];
+    if(type === "REST"){
+      ids = [];
+    } else if(type === "FULL"){
+      ["STR","AGI","VIT"].forEach(cat=>{
+        const picks = pickForCategory(cat, 1, excludeIds||[], lastMap);
+        if(picks[0]) ids.push(picks[0].id);
+      });
+    } else {
+      ids = pickForCategory(type, 3, excludeIds||[], lastMap).map(p=>p.id);
+    }
+    return { date: todayStr(), contractType: type, exerciseIds: ids };
+  }
+
+  function ensureBoard(){
+    if(!state.gateRank){
+      state.gateRank = rankFor(state.level);
+      saveState();
+    }
+    if(!state.hunterId){
+      state.hunterId = genHunterId();
+      saveState();
+    }
+    const today = todayStr();
+    const type = state.roster[todayWeekday()];
+    if(!state.board || state.board.date !== today || state.board.contractType !== type){
+      state.board = generateBoard([]);
+      acceptedContractIds = new Set();
+      saveState();
+    }
+  }
+
+  function genHunterId(){
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let s = "";
+    for(let i=0;i<5;i++){ s += chars[Math.floor(Math.random()*chars.length)]; }
+    return "SL-" + s;
+  }
+
+  // Replays log history through the same continuation + grace rules to find the longest streak ever reached.
+  function computeLongestStreak(){
+    const dates = Array.from(new Set((state.logs||[]).map(l=>l.date))).sort();
+    if(dates.length===0) return 0;
+    let streak = 1, longest = 1, graceLastUsed = null;
+    for(let i=1;i<dates.length;i++){
+      const prev = dates[i-1], curr = dates[i];
+      const gap = daysBetween(prev, curr);
+      if(gap === 1){
+        streak += 1;
+      } else if(gap === 2){
+        const missed = addDays(prev, 1);
+        const graceAvailable = !graceLastUsed || daysBetween(graceLastUsed, missed) >= GRACE_WINDOW_DAYS;
+        if(graceAvailable){ streak += 1; graceLastUsed = missed; }
+        else{ streak = 1; }
+      } else {
+        streak = 1;
+      }
+      if(streak > longest) longest = streak;
+    }
+    return longest;
+  }
+
+  // ---------- achievements & titles ----------
+  // Each achievement grants a title the hunter can equip. Checks read only state,
+  // so most unlock retroactively; goal-clear ones accrue via state.counters going forward.
+  const ACHIEVEMENTS = [
+    { id:"first_hunt", name:"First Hunt",   title:"The Awakened",     desc:"Complete your first quest.",             check:(c)=> c.daysHunted >= 1 },
+    { id:"streak_7",   name:"Iron Will",    title:"Iron-Willed",      desc:"Reach a 7-day hunt streak.",             check:(c)=> c.longestStreak >= 7 },
+    { id:"streak_30",  name:"Relentless",   title:"The Relentless",   desc:"Reach a 30-day hunt streak.",            check:(c)=> c.longestStreak >= 30 },
+    { id:"days_50",    name:"Half Century", title:"Veteran Hunter",   desc:"Log workouts on 50 different days.",     check:(c)=> c.daysHunted >= 50 },
+    { id:"days_100",   name:"Centurion",    title:"The Centurion",    desc:"Log workouts on 100 different days.",    check:(c)=> c.daysHunted >= 100 },
+    { id:"level_10",   name:"Reawakening",  title:"Rising Hunter",    desc:"Reach Level 10 (D-Rank).",               check:(c)=> c.level >= 10 },
+    { id:"level_25",   name:"Elite",        title:"Elite Hunter",     desc:"Reach Level 25.",                        check:(c)=> c.level >= 25 },
+    { id:"level_50",   name:"Monarch",      title:"Shadow Monarch",   desc:"Reach Level 50 (S-Rank).",               check:(c)=> c.level >= 50 },
+    { id:"goals_1",    name:"Goal Breaker", title:"Goal Breaker",     desc:"Clear a daily goal for the first time.", check:(c)=> c.goalsCleared >= 1 },
+    { id:"goals_25",   name:"Limit Break",  title:"Limit Breaker",    desc:"Clear 25 daily goals.",                  check:(c)=> c.goalsCleared >= 25 },
+    { id:"s_gate_1",   name:"Gate Crasher", title:"Gate Crasher",     desc:"Clear a daily goal at S-Gate difficulty.", check:(c)=> c.sGateGoalClears >= 1 },
+    { id:"xp_300",     name:"Berserker",    title:"The Berserker",    desc:"Earn 300+ XP in a single day.",          check:(c)=> c.maxDayXp >= 300 },
+    { id:"variety_10", name:"Versatile",    title:"Jack of All Trades", desc:"Log 10 different exercises all-time.", check:(c)=> c.distinctExercises >= 10 },
+    { id:"tier2_any",  name:"Ascension",    title:"The Ascendant",    desc:"Reach Tier II in any stat.",             check:(c)=> c.maxStatPoints >= 100 },
+    { id:"boss_1",     name:"Dungeon Breaker", title:"Dungeon Breaker", desc:"Slay your first Weekly Boss.",         check:(c)=> c.bossesSlain >= 1 },
+    { id:"boss_5",     name:"Raid Captain", title:"The Boss-Slayer",  desc:"Slay 5 Weekly Bosses.",                  check:(c)=> c.bossesSlain >= 5 },
+    { id:"penalty_1",  name:"Redemption",   title:"The Redeemed",     desc:"Clear a Penalty Quest and restore a broken streak.", check:(c)=> c.penaltiesCleared >= 1 },
+  ];
+
+  function achievementContext(){
+    const stats = categoryPoints();
+    const distinct = new Set();
+    let maxDayXp = 0;
+    (state.logs||[]).forEach(l=>{
+      if((l.totalXp||0) > maxDayXp) maxDayXp = l.totalXp;
+      (l.entries||[]).forEach(e=>distinct.add(e.id));
+    });
+    const counters = state.counters || { goalsCleared:0, sGateGoalClears:0 };
+    return {
+      level: state.level,
+      daysHunted: (state.logs||[]).length,
+      longestStreak: computeLongestStreak(),
+      maxDayXp,
+      distinctExercises: distinct.size,
+      maxStatPoints: Math.max(stats.STR||0, stats.AGI||0, stats.VIT||0),
+      goalsCleared: counters.goalsCleared || 0,
+      sGateGoalClears: counters.sGateGoalClears || 0,
+      bossesSlain: counters.bossesSlain || 0,
+      penaltiesCleared: counters.penaltiesCleared || 0,
+    };
+  }
+
+  // Unlocks any newly-earned achievements; returns the list of new unlocks.
+  // Achievements are honors — once earned they are never revoked, even if logs are later removed.
+  function checkAchievements(){
+    state.achievements = state.achievements || {};
+    const ctx = achievementContext();
+    const newly = [];
+    ACHIEVEMENTS.forEach(a=>{
+      if(!state.achievements[a.id] && a.check(ctx)){
+        state.achievements[a.id] = todayStr();
+        newly.push(a);
+      }
+    });
+    return newly;
+  }
+
+  function equippedTitleText(){
+    if(!state.equippedTitle) return null;
+    const a = ACHIEVEMENTS.find(x=>x.id===state.equippedTitle);
+    return (a && state.achievements && state.achievements[a.id]) ? a.title : null;
+  }
+
+  // ---------- weekly boss ----------
+  const BOSS_POOLS = {
+    STR:   { color:"#ff8a7a", names:["Iron Colossus","Obsidian Warden","Stonefang Berserker"] },
+    AGI:   { color:"#7ce0a0", names:["Gale Reaper","Twin-Fang Stalker","Storm Herald"] },
+    VIT:   { color:"#8fb8ff", names:["Eternal Sentinel","Abyss Tortoise","Chained Leviathan"] },
+    MIXED: { color:"#f6c453", names:["Dungeon Overlord","The Monarch's Shade","Gatekeeper"] },
+  };
+  const BOSS_CATEGORIES = ["STR","AGI","VIT","MIXED"];
+  const BOSS_HP_FLOORS = { E:400, D:300, C:500, B:750, A:1100, S:1500 };
+  const BOSS_HP_MULTIPLIER = 1.15;
+  const BOSS_BOUNTY_PCT = 0.20;
+
+  // Boss art, hosted in the GitHub repo's /bosses folder and loaded by raw URL.
+  // Filenames match exactly what's committed (spaces/casing included) — encodeURIComponent
+  // handles the URL-safety, so no renaming is required in the repo. null = not uploaded yet,
+  // in which case the panel falls back to the ☠ glyph automatically.
+  const BOSS_IMAGE_BASE = "https://raw.githubusercontent.com/miguelcol29/shadow-log/main/bosses/";
+  const BOSS_IMAGE_FILES = {
+    "Iron Colossus": null,
+    "Obsidian Warden": null,
+    "Stonefang Berserker": null,
+    "Gale Reaper": null,
+    "Twin-Fang Stalker": "Twin-Fang Stalker.png",
+    "Storm Herald": "storm-herald.png",
+    "Eternal Sentinel": null,
+    "Abyss Tortoise": null,
+    "Chained Leviathan": null,
+    "Dungeon Overlord": null,
+    "The Monarch's Shade": null,
+    "Gatekeeper": null,
+  };
+  function bossImageUrl(bossName){
+    const file = BOSS_IMAGE_FILES[bossName];
+    return file ? (BOSS_IMAGE_BASE + encodeURIComponent(file)) : null;
+  }
+
+  // Monday of the week containing dateStr (Monday-start weeks).
+  function mondayOf(dateStr){
+    const d = new Date(dateStr+"T00:00:00");
+    const offset = (d.getDay() + 6) % 7; // Mon=0 ... Sun=6
+    return addDays(dateStr, -offset);
+  }
+  function seedFromString(str){
+    let seed = 0;
+    for(let i=0;i<str.length;i++){ seed = (seed*31 + str.charCodeAt(i)) >>> 0; }
+    return seed;
+  }
+  // Total XP logged within the boss's Monday→Sunday window (computed live from logs).
+  function computeWeeklyDamage(weekKey){
+    const weekEnd = addDays(weekKey, 6);
+    return (state.logs||[])
+      .filter(l=> l.date >= weekKey && l.date <= weekEnd)
+      .reduce((sum,l)=> sum + (l.totalXp||0), 0);
+  }
+  function avgRecentWeeklyXp(currentMonday){
+    let total = 0;
+    for(let k=1;k<=3;k++){ total += computeWeeklyDamage(addDays(currentMonday, -7*k)); }
+    return total / 3;
+  }
+  function spawnWeeklyBoss(weekKey){
+    const seed = seedFromString(weekKey);
+    const category = BOSS_CATEGORIES[seed % BOSS_CATEGORIES.length];
+    const pool = BOSS_POOLS[category];
+    const name = pool.names[Math.floor(seed/7) % pool.names.length];
+    const gate = state.gateRank || rankFor(state.level);
+    const floor = BOSS_HP_FLOORS[gate] || BOSS_HP_FLOORS.E;
+    const adaptive = Math.round((avgRecentWeeklyXp(weekKey) * BOSS_HP_MULTIPLIER) / 10) * 10;
+    const hp = Math.max(floor, adaptive);
+    return {
+      weekKey, name, category, hp,
+      spawnGate: gate,
+      defeatedAt: null,
+      bountyXp: Math.round((hp * BOSS_BOUNTY_PCT) / 5) * 5,
+    };
+  }
+  // Spawns this week's boss if missing, archiving last week's outcome to the Boss Log first.
+  function ensureWeeklyBoss(){
+    const currentMonday = mondayOf(todayStr());
+    if(state.weeklyBoss && state.weeklyBoss.weekKey === currentMonday) return;
+    if(state.weeklyBoss){
+      const old = state.weeklyBoss;
+      state.bossHistory = state.bossHistory || [];
+      state.bossHistory.push({
+        weekKey: old.weekKey,
+        name: old.name,
+        category: old.category,
+        hp: old.hp,
+        dealt: Math.min(old.hp, computeWeeklyDamage(old.weekKey)),
+        slain: !!old.defeatedAt,
+      });
+      if(state.bossHistory.length > 26){ state.bossHistory = state.bossHistory.slice(-26); }
+    }
+    state.weeklyBoss = spawnWeeklyBoss(currentMonday);
+    saveState();
+  }
+  // Marks the boss slain and returns the bounty to award; 0 if no kill occurred.
+  // Slays are honors — once defeated, later log edits never un-slay a boss.
+  function processBossSlay(){
+    const boss = state.weeklyBoss;
+    if(!boss || boss.defeatedAt) return 0;
+    if(computeWeeklyDamage(boss.weekKey) >= boss.hp){
+      boss.defeatedAt = todayStr();
+      state.counters = state.counters || {};
+      state.counters.bossesSlain = (state.counters.bossesSlain||0) + 1;
+      return boss.bountyXp;
+    }
+    return 0;
+  }
+
+  // ---------- penalty quest ----------
+  // When a real streak (3+ days) breaks past the grace day, the System offers one
+  // same-day trial: clear three exercises (one per category) at 1.5× their daily
+  // goals before midnight to fully restore the lost streak. Offered at most once
+  // per rolling 14 days; failure simply expires — no extra punishment.
+  const PENALTY_MULTIPLIER = 1.5;
+  const PENALTY_MIN_LOST_STREAK = 3;
+  const PENALTY_COOLDOWN_DAYS = 14;
+
+  function maybeOfferPenalty(lostStreak){
+    if(lostStreak < PENALTY_MIN_LOST_STREAK) return;
+    state.penalty = state.penalty || { lastOfferedDate:null, active:null };
+    const today = todayStr();
+    if(state.penalty.active && state.penalty.active.date === today) return;
+    const last = state.penalty.lastOfferedDate;
+    if(last && daysBetween(last, today) < PENALTY_COOLDOWN_DAYS) return;
+
+    const gate = state.gateRank || rankFor(state.level);
+    const lastMap = lastLoggedMap();
+    const ids = [];
+    const targets = {};
+    ["STR","AGI","VIT"].forEach(cat=>{
+      const picks = pickForCategory(cat, 1, [], lastMap);
+      if(picks[0]){
+        ids.push(picks[0].id);
+        targets[picks[0].id] = Math.max(1, Math.round(gateScaledGoal(picks[0], gate) * PENALTY_MULTIPLIER));
+      }
+    });
+    if(ids.length === 0) return;
+
+    state.penalty.lastOfferedDate = today;
+    state.penalty.active = { date: today, lostStreak, exerciseIds: ids, targets, status:"active" };
+  }
+
+  // Expires an unfinished trial once its day has passed. Failure is silent by design.
+  function ensurePenaltyExpiry(){
+    const p = state.penalty && state.penalty.active;
+    if(p && p.status === "active" && p.date < todayStr()){
+      state.penalty.active = null;
+      saveState();
+    }
+  }
+
+  // Checks whether today's trial is fully cleared; if so, restores the lost streak
+  // (+1 for today) and returns the cleared trial. Must run after log entries merge.
+  function processPenaltyClear(){
+    const p = state.penalty && state.penalty.active;
+    if(!p || p.status !== "active" || p.date !== todayStr()) return null;
+    const allMet = p.exerciseIds.every(id=> todayTotalFor(id) >= p.targets[id]);
+    if(!allMet) return null;
+    p.status = "cleared";
+    state.counters = state.counters || {};
+    state.counters.penaltiesCleared = (state.counters.penaltiesCleared||0) + 1;
+    state.streak = p.lostStreak + 1;
+    return p;
+  }
+
+  function rerollBoard(){
+    const exclude = state.board ? state.board.exerciseIds : [];
+    state.board = generateBoard(exclude);
+    acceptedContractIds = new Set();
+    saveState();
+    render();
+  }
+
+  function setGateRank(rank){
+    if(RANK_ORDER.indexOf(rank) === -1) return;
+    state.gateRank = rank;
+    saveState();
+    render();
+  }
+
+  function acceptContract(id){
+    const ex = allExercises().find(e=>e.id===id);
+    if(!ex) return;
+    acceptedContractIds.add(id);
+    render();
+    // Daily goals are cumulative — select the exercise and focus the input so real sets get logged toward the goal.
+    const sel = document.getElementById("exerciseSelect");
+    const val = document.getElementById("setValueInput");
+    if(sel && val){
+      sel.value = id;
+      val.placeholder = currentPlaceholder();
+      val.focus();
+      val.scrollIntoView({behavior:"smooth", block:"center"});
+    }
+  }
+
+  let saveInFlight = false;
+  let savePending = false;
+  let lastSaveTime = 0;
+  let consecutiveFailures = 0;
+  const MIN_SAVE_INTERVAL = 600;
+  const MAX_FAST_RETRIES = 4;
+  let syncStatus = "idle"; // idle | saving | retrying | stalled
+
+  function setSyncStatus(status){
+    syncStatus = status;
+    const textEl = document.getElementById("syncStatusText");
+    const retryBtn = document.getElementById("retrySaveBtn");
+    if(textEl){ textEl.textContent = SYNC_STATUS_TEXT[status] || ""; }
+    const wrap = document.getElementById("syncStatus");
+    if(wrap){ wrap.className = "sync-status " + status; }
+    if(retryBtn){ retryBtn.style.display = status === "stalled" ? "inline-block" : "none"; }
+  }
+
+  function saveState(){
+    savePending = true;
+    return processSaveQueue();
+  }
+
+  function retrySaveNow(){
+    consecutiveFailures = 0;
+    savePending = true;
+    processSaveQueue();
+  }
+
+  async function processSaveQueue(){
+    if(saveInFlight) return;
+    saveInFlight = true;
+    while(savePending){
+      savePending = false;
+      setSyncStatus("saving");
+      const wait = Math.max(0, MIN_SAVE_INTERVAL - (Date.now() - lastSaveTime));
+      if(wait > 0) await new Promise(r=>setTimeout(r, wait));
+      try{
+        const result = await storageSet(STORAGE_KEY, JSON.stringify(state));
+        if(!result){ throw new Error("Storage set returned no result"); }
+        consecutiveFailures = 0;
+        setSyncStatus("idle");
+      }catch(err){
+        consecutiveFailures++;
+        console.error(`Save failed (attempt ${consecutiveFailures})`, err);
+        savePending = true;
+        if(consecutiveFailures > MAX_FAST_RETRIES){
+          setSyncStatus("stalled");
+          await new Promise(r=>setTimeout(r, 30000));
+        } else {
+          setSyncStatus("retrying");
+          const backoff = Math.min(15000, 1500 * Math.pow(1.7, consecutiveFailures-1));
+          await new Promise(r=>setTimeout(r, backoff));
+        }
+      }
+      lastSaveTime = Date.now();
+    }
+    saveInFlight = false;
+  }
+  async function loadState(){
+    try{
+      const res = await storageGet(STORAGE_KEY);
+      if(res && res.value){ return Object.assign(defaultState(), JSON.parse(res.value)); }
+    }catch(err){ /* no existing data */ }
+    return defaultState();
+  }
+
+  function checkStreakBreak(){
+    if(state.lastLogDate){
+      const today = todayStr();
+      if(state.lastLogDate !== today){
+        const check = checkStreakGrace(state.lastLogDate, today);
+        if(!check.continued && state.streak !== 0){
+          const lostStreak = state.streak;
+          state.streak = 0;
+          maybeOfferPenalty(lostStreak);
+          saveState();
+        }
+      }
+    }
+  }
+
+  function addXp(amount){
+    state.xp += amount;
+    let leveledUp = false;
+    const oldRank = rankFor(state.level);
+    while(state.xp >= xpToNext(state.level)){
+      state.xp -= xpToNext(state.level);
+      state.level += 1;
+      leveledUp = true;
+    }
+    const newRank = rankFor(state.level);
+    const rankedUp = newRank !== oldRank ? newRank : null;
+    return {leveledUp, rankedUp};
+  }
+
+  function completeQuest(){
+    if(builder.length === 0) return;
+    const today = todayStr();
+    const oldPoints = categoryPoints();
+    const oldTiers = {STR:tierInfo(oldPoints.STR).tier, AGI:tierInfo(oldPoints.AGI).tier, VIT:tierInfo(oldPoints.VIT).tier};
+    let baseXp = 0;
+    const entries = builder.map(b=>{
+      const sum = b.sets.reduce((a,c)=>a+c,0);
+      const xp = b.type === "time" ? Math.round(sum*0.4) : b.type === "minutes" ? Math.round(sum*3) : Math.round(sum);
+      baseXp += xp;
+      return {id:b.id, name:b.name, category:b.category, type:b.type, sets:b.sets.slice(), xp};
+    });
+
+    // Capture pre-merge totals so we can detect daily-goal crossings below
+    const prevTotals = {};
+    builder.forEach(b=>{ prevTotals[b.id] = todayTotalFor(b.id); });
+
+    let log = state.logs.find(l=>l.date===today);
+    if(!log){ log = {date:today, entries:[], totalXp:0}; state.logs.push(log); }
+    entries.forEach(e=>{
+      const existing = log.entries.find(x=>x.id===e.id);
+      if(existing){ existing.sets = existing.sets.concat(e.sets); existing.xp += e.xp; }
+      else{ log.entries.push(e); }
+    });
+
+    // Daily-goal crossings: count each exercise that goes from below its gate-scaled goal to at/above it
+    state.counters = state.counters || { goalsCleared:0, sGateGoalClears:0 };
+    const activeGate = state.gateRank || rankFor(state.level);
+    const uniqueIds = Array.from(new Set(builder.map(b=>b.id)));
+    uniqueIds.forEach(id=>{
+      const ex = allExercises().find(e=>e.id===id);
+      if(!ex) return;
+      const goal = gateScaledGoal(ex, activeGate);
+      const now = todayTotalFor(id);
+      if((prevTotals[id]||0) < goal && now >= goal){
+        state.counters.goalsCleared = (state.counters.goalsCleared||0) + 1;
+        if(activeGate === "S"){ state.counters.sGateGoalClears = (state.counters.sGateGoalClears||0) + 1; }
+      }
+    });
+
+    let usedGraceToday = false;
+    if(state.lastLogDate !== today){
+      const check = checkStreakGrace(state.lastLogDate, today);
+      // Break detected at log time (e.g. app stayed open past midnight) — offer the trial before resetting
+      if(!check.continued && state.streak >= PENALTY_MIN_LOST_STREAK){ maybeOfferPenalty(state.streak); }
+      state.streak = check.continued ? state.streak + 1 : 1;
+      if(check.usedGrace){
+        state.grace.lastUsedDate = check.missedDate;
+        usedGraceToday = true;
+      }
+      state.lastLogDate = today;
+    }
+
+    // Penalty trial: check for the clear before computing the streak bonus, so the
+    // quest that completes the trial immediately earns the restored streak's bonus.
+    const clearedPenalty = processPenaltyClear();
+
+    const bonusPct = Math.min(25, state.streak * 1);
+    const bonusXp = Math.round(baseXp * bonusPct / 100);
+    const totalXp = baseXp + bonusXp;
+    log.totalXp += totalXp;
+
+    // Weekly boss: damage is the quest's XP; check for the killing blow and award the bounty with this quest's XP.
+    ensureWeeklyBoss();
+    const boss = state.weeklyBoss;
+    const bossWasAlive = boss && !boss.defeatedAt;
+    const bounty = processBossSlay();
+    const bossInfo = boss ? {
+      active: bossWasAlive,
+      slainNow: bounty > 0,
+      name: boss.name,
+      damage: totalXp,
+      remaining: Math.max(0, boss.hp - computeWeeklyDamage(boss.weekKey)),
+      bounty: bounty,
+    } : null;
+
+    const result = addXp(totalXp + bounty);
+    const newPoints = categoryPoints();
+    const tierUps = ["STR","AGI","VIT"].filter(cat=> tierInfo(newPoints[cat]).tier > oldTiers[cat])
+      .map(cat=> ({cat, label: tierInfo(newPoints[cat]).label}));
+    const newAchievements = checkAchievements();
+    builder = [];
+    saveState();
+    render();
+    if(result.leveledUp){ triggerLevelUpFlash(); }
+    showSystemWindow(baseXp, result.leveledUp, result.rankedUp, tierUps, bonusPct, bonusXp, usedGraceToday, newAchievements, bossInfo, clearedPenalty ? state.streak : null);
+  }
+
+  // ---------- render ----------
+  const app = document.getElementById("app");
+
+  function render(){
+    ensureBoard();
+    ensureWeeklyBoss();
+    ensurePenaltyExpiry();
+    const rank = rankFor(state.level);
+    const rankColor = RANK_COLORS[rank];
+    const need = xpToNext(state.level);
+    const pct = Math.min(100, Math.round((state.xp/need)*100));
+    const statPoints = categoryPoints();
+    const today = todayStr();
+    const loggedToday = state.logs.find(l=>l.date===today);
+
+    app.innerHTML = `
+      <div class="title-block">
+        <h1>SHADOW LOG</h1>
+        <p>The System has granted you the qualifications of a Player.</p>
+        <div class="hunter-identity">
+          <div class="hunter-avatar-frame" style="--rank-color:${rankColor}; --rank-color-glow:${rankColor}66;">
+            ${state.hunterAvatar ? `<img src="${state.hunterAvatar}" alt="Hunter Avatar" />` : `<span class="avatar-placeholder">◈</span>`}
+          </div>
+          <span class="hunter-name-col">
+            <span class="hunter-name-display">${state.hunterName ? escapeHtml(state.hunterName) : "Unnamed Hunter"}</span>
+            ${equippedTitleText() ? `<span class="hunter-title-display">「 ${escapeHtml(equippedTitleText())} 」</span>` : ""}
+          </span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="eyebrow"><span class="dot"></span>PLAYER STATUS</div>
+        <div class="status-grid">
+          <div class="rank-badge" style="--rank-color:${rankColor}">${rank}</div>
+          <div class="level-info">
+            <div class="level-row">
+              <span class="lv">LEVEL <span id="levelNumDisplay">${state.level}</span></span>${infoBtn("level")}
+              <span class="rank-label">${rank}-RANK HUNTER</span>${infoBtn("rank")}
+            </div>
+            <div class="xp-bar-track"><div class="xp-bar-fill" style="width:${pct}%"></div></div>
+            <div class="xp-text">XP <span id="xpNumDisplay">${state.xp}</span> / ${need}${infoBtn("xp")}</div>
+          </div>
+          <div class="streak-block">
+            <div class="streak-num" id="streakNumDisplay">${state.streak}</div>
+            <div class="streak-label">HUNT STREAK${infoBtn("streak")}</div>
+            <div class="streak-bonus">+${Math.min(25, state.streak)}% XP</div>
+            <div class="grace-status">${isGraceAvailable(today) ? "🛡 Rest Day Ready" : `🛡 Recharges in ${GRACE_WINDOW_DAYS - daysBetween(state.grace.lastUsedDate, today)}d`}</div>
+          </div>
+        </div>
+
+        <div class="substats">
+          ${["STR","AGI","VIT"].map(cat=>{
+            const val = statPoints[cat]||0;
+            const info = tierInfo(val);
+            const fillPct = tierFillPct(val);
+            const cls = cat.toLowerCase();
+            const displayFrac = info.tier === 3 ? `${val} / MAX` : `${val} / ${info.cap}`;
+            return `<div class="substat">
+              <div class="substat-head"><span class="${cls}">${cat}${infoBtn(cls)} <em>TIER ${info.label}</em></span><b>${displayFrac}</b></div>
+              <div class="substat-bar"><div class="substat-fill ${cls} ${info.tier===3?'maxed':''}" style="width:${fillPct}%"></div></div>
+            </div>`;
+          }).join("")}
+        </div>
+      </div>
+
+      ${renderPenaltyQuest()}
+
+      <div class="panel" style="margin-top:18px;">
+        <div class="eyebrow"><span class="dot"></span>GUILD JOB BOARD</div>
+        ${renderJobBoard()}
+        <button class="toggle-custom" id="toggleRoster" style="margin-top:14px;">${rosterFormOpen ? "− Hide guild roster" : "⚙ Edit guild roster"}</button>
+        <div class="custom-form ${rosterFormOpen ? "open" : ""}" id="rosterForm" style="flex-direction:column; align-items:stretch;">
+          ${renderRosterForm()}
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:18px;">
+        <div class="eyebrow"><span class="dot"></span>WEEKLY BOSS${infoBtn("boss")}</div>
+        ${renderWeeklyBoss()}
+        <button class="toggle-custom" id="toggleBossLog" style="margin-top:14px;">${bossLogOpen ? "− Hide boss log" : "📜 View boss log"}</button>
+        <div class="custom-form ${bossLogOpen ? "open" : ""}" style="flex-direction:column; align-items:stretch;">
+          ${renderBossLog()}
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:18px;">
+        <div class="eyebrow panel-eyebrow-row"><span class="eyebrow-label"><span class="dot"></span>FREELANCE QUEST</span><button class="panel-gear-btn" id="openExerciseMgrBtn" type="button" aria-label="Manage exercises" title="Manage exercises">⚙</button></div>
+        <p style="font-size:12px;color:var(--text-dim2);margin:-6px 0 14px;">Accept a contract above, or log anything off-board here — a different exercise, a soccer match, disc golf, whatever today calls for.</p>
+        ${!loggedToday ? `<div class="empty-note" style="margin-bottom:10px;">No quest logged today. The System is waiting.</div>` : `<div class="today-summary" style="margin-bottom:10px;">Today's quest: ${loggedToday.entries.map(e=>e.name).join(", ")} — ${loggedToday.totalXp} XP earned so far.</div>`}
+
+        <div class="builder-row">
+          <select id="exerciseSelect">${renderExerciseOptions()}</select>
+          <input type="number" min="0" class="num-input" id="setValueInput" placeholder="${currentPlaceholder()}" />
+          <button class="btn" id="addSetBtn">Add Set</button>
+        </div>
+
+        <div class="builder-pills" id="builderPills">${renderBuilderPills()}</div>
+
+        <button class="btn primary" id="completeQuestBtn" ${builder.length===0 ? "disabled" : ""}>Complete Quest</button>
+      </div>
+
+      <div class="stack">
+        <div class="grid-2">
+          <div class="panel">
+            <h2 class="panel-title">CONSISTENCY<small>Hunt Log — last 12 weeks</small></h2>
+            <div class="heatmap-wrap">${renderHeatmap()}</div>
+            <div class="heatmap-legend">
+              <div class="hm-cell"></div><span>No quest</span>
+              <div class="hm-cell logged"></div><span>Quest logged</span>
+              <div class="hm-cell today"></div><span>Today</span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h2 class="panel-title">PROGRESS<small>Stat Growth over time</small></h2>
+            <div class="chart-head">
+              <span style="font-size:12px;color:var(--text-dim2);">Exercise</span>
+              <select id="chartSelect">${renderChartOptions()}</select>
+            </div>
+            ${renderProgressChart()}
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2 class="panel-title">QUEST HISTORY<small>Last 15 logged days</small></h2>
+          <div class="history-list">${renderHistory()}</div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:18px;">
+        <div class="eyebrow"><span class="dot"></span>ACHIEVEMENTS</div>
+        <p style="font-size:12px;color:var(--text-dim2);margin:-6px 0 14px;">Unlock achievements to earn titles. Equip one to display it beside your name — and on your Guild Member Card.</p>
+        <div class="achievements-grid">${renderAchievements()}</div>
+      </div>
+
+      <div class="panel" style="margin-top:18px;">
+        <div class="eyebrow"><span class="dot"></span>GUILD MEMBER CARD</div>
+        <p style="font-size:12px;color:var(--text-dim2);margin:-6px 0 14px;">Generate a shareable snapshot of your progress — level, rank, stats, and streak — as a downloadable image for Discord.</p>
+        <button class="btn primary" id="openCardBtn">🪪 Generate Card</button>
+      </div>
+
+      <div class="footer">
+        <div class="storage-mode-note">${IS_STANDALONE ? "💾 Standalone mode — progress saves to this browser only" : "☁ Synced to your Claude account"}</div>
+        <div class="sync-status idle" id="syncStatus">
+          <span id="syncStatusText"></span>
+          <button class="btn small ghost" id="retrySaveBtn" style="display:none; margin-left:8px;">Retry Now</button>
+        </div>
+        <button class="btn ghost" id="resetBtn">Reset all data</button>
+      </div>
+    `;
+
+    bindEvents();
+    animateStatNumbers();
+    setSyncStatus(syncStatus);
+  }
+
+  function renderExerciseOptions(){
+    const groups = {STR:[], AGI:[], VIT:[]};
+    visibleExercises().forEach(ex=>groups[ex.category].push(ex));
+    return Object.keys(groups).map(cat=>{
+      if(groups[cat].length===0) return "";
+      return `<optgroup label="${cat}">${groups[cat].map(ex=>`<option value="${ex.id}">${ex.name}${ex.type==="time" ? " (sec)" : ex.type==="minutes" ? " (min)" : ""}</option>`).join("")}</optgroup>`;
+    }).join("");
+  }
+
+  function renderExerciseManager(){
+    const hidden = state.hiddenExerciseIds || [];
+    const groups = {STR:[], AGI:[], VIT:[]};
+    allExercises().forEach(ex=>groups[ex.category].push(ex));
+    const rows = Object.keys(groups).map(cat=>{
+      if(groups[cat].length===0) return "";
+      return `<div class="ex-mgr-group">
+        <div class="ex-mgr-cat">${cat}</div>
+        ${groups[cat].map(ex=>{
+          const isHidden = hidden.indexOf(ex.id)!==-1;
+          const unit = ex.type==="time" ? "sec" : ex.type==="minutes" ? "min" : "reps";
+          const customGoal = state.dailyGoals && state.dailyGoals[ex.id];
+          const defaultGoal = (GATE_TARGETS[ex.type] || GATE_TARGETS.reps).E;
+          return `<div class="ex-mgr-row ${isHidden?"is-hidden":""}">
+            <span class="ex-mgr-name">${escapeHtml(ex.name)}</span>
+            <span class="ex-mgr-goal">
+              <input type="number" min="1" class="ex-mgr-goal-input" data-goal-exercise="${ex.id}" placeholder="${defaultGoal}" value="${customGoal || ""}" />
+              <span class="ex-mgr-unit">${unit}/day</span>
+            </span>
+            <button class="btn small ${isHidden?"":"ghost"}" data-toggle-exercise="${ex.id}">${isHidden?"Restore":"Remove"}</button>
+          </div>`;
+        }).join("")}
+      </div>`;
+    }).join("");
+    return rows + `<div class="ex-mgr-note">Daily Goal is your E-Gate baseline — the Job Board scales it up with your Gate Rank (an S-Gate is 2.5× an E-Gate). Leave blank to use the default shown. Removed exercises no longer appear in the dropdown or Job Board, but past logs are untouched.</div>`;
+  }
+
+  function setDailyGoal(id, value){
+    state.dailyGoals = state.dailyGoals || {};
+    const num = parseInt(value, 10);
+    if(!num || num <= 0){ delete state.dailyGoals[id]; }
+    else{ state.dailyGoals[id] = num; }
+    saveState();
+  }
+
+  function toggleExerciseVisibility(id){
+    state.hiddenExerciseIds = state.hiddenExerciseIds || [];
+    const idx = state.hiddenExerciseIds.indexOf(id);
+    if(idx===-1){ state.hiddenExerciseIds.push(id); }
+    else{ state.hiddenExerciseIds.splice(idx,1); }
+    saveState();
+    render();
+  }
+
+  function currentPlaceholder(){
+    const sel = document.getElementById("exerciseSelect");
+    const id = sel ? sel.value : allExercises()[0].id;
+    const ex = allExercises().find(e=>e.id===id) || allExercises()[0];
+    if(!ex) return "reps";
+    return ex.type === "time" ? "seconds" : ex.type === "minutes" ? "minutes" : "reps";
+  }
+
+  function renderBuilderPills(){
+    if(builder.length===0) return `<div class="empty-note">No exercises added to today's quest yet.</div>`;
+    return builder.map((b,i)=>`
+      <div class="pill-row">
+        <span class="name">${b.name}</span>
+        <span class="cat">${b.category}</span>
+        <span class="sets">${b.sets.join(" · ")}${b.type==="time" ? "s" : b.type==="minutes" ? "m" : ""}</span>
+        <button class="remove" data-idx="${i}" title="Remove">✕</button>
+      </div>
+    `).join("");
+  }
+
+  function renderPenaltyQuest(){
+    const p = state.penalty && state.penalty.active;
+    if(!p || p.date !== todayStr()) return "";
+
+    if(p.status === "cleared"){
+      return `
+        <div class="panel penalty-panel cleared" style="margin-top:18px;">
+          <div class="eyebrow penalty-eyebrow"><span class="dot"></span>PENALTY QUEST${infoBtn("penalty")}</div>
+          <div class="penalty-cleared-msg">⚖ TRIAL CLEARED — The System acknowledges your resolve. Streak restored to <b>${state.streak}</b>.</div>
+        </div>
+      `;
+    }
+
+    const rows = p.exerciseIds.map(id=>{
+      const ex = allExercises().find(e=>e.id===id);
+      if(!ex) return "";
+      const target = p.targets[id];
+      const done = todayTotalFor(id);
+      const met = done >= target;
+      const pct = Math.min(100, Math.round((done/target)*100));
+      const unit = ex.type==="time" ? "sec" : ex.type==="minutes" ? "min" : "reps";
+      const catColor = CONTRACT_COLORS[ex.category];
+      return `
+        <div class="penalty-row ${met ? "met" : ""}">
+          <span class="penalty-ex-name"><span style="color:${catColor};">${ex.category}</span> ${ex.name}</span>
+          <div class="goal-progress-track penalty-track"><div class="goal-progress-fill" style="width:${pct}%; background:${met ? "var(--green)" : "var(--red)"};"></div></div>
+          <span class="penalty-target">${done} / ${target} ${unit} ${met ? "✓" : ""}</span>
+        </div>
+      `;
+    }).join("");
+
+    return `
+      <div class="panel penalty-panel" style="margin-top:18px;">
+        <div class="eyebrow penalty-eyebrow"><span class="dot penalty-dot"></span>PENALTY QUEST${infoBtn("penalty")}</div>
+        <div class="penalty-warning">⚠ Your ${p.lostStreak}-day streak has been severed. The System offers one trial: clear all three at 1.5× your daily goals <b>before midnight</b> to restore it. There is no second offer.</div>
+        <div class="penalty-rows">${rows}</div>
+      </div>
+    `;
+  }
+
+  function renderWeeklyBoss(){
+    const boss = state.weeklyBoss;
+    if(!boss) return `<div class="empty-note">The Gate is quiet. A boss will appear soon.</div>`;
+    const color = (BOSS_POOLS[boss.category] || BOSS_POOLS.MIXED).color;
+    const dealt = Math.min(boss.hp, computeWeeklyDamage(boss.weekKey));
+    const remaining = Math.max(0, boss.hp - dealt);
+    const hpPct = Math.max(0, Math.round((remaining / boss.hp) * 100));
+    const slain = !!boss.defeatedAt;
+    const weekEnd = addDays(boss.weekKey, 6);
+    const daysLeft = Math.max(0, daysBetween(todayStr(), weekEnd));
+    const daysLabel = daysLeft === 0 ? "Last day!" : `${daysLeft} day${daysLeft===1?"":"s"} left`;
+
+    const imgUrl = bossImageUrl(boss.name);
+    const portraitHtml = imgUrl
+      ? `<div class="boss-portrait-frame" style="--boss-color:${color};">
+           <img src="${imgUrl}" alt="${escapeHtml(boss.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+           <span class="boss-sigil boss-sigil-fallback" style="display:none;">☠</span>
+         </div>`
+      : `<div class="boss-portrait-frame" style="--boss-color:${color};"><span class="boss-sigil">☠</span></div>`;
+
+    return `
+      <div class="boss-card ${slain ? "slain" : ""}" style="--boss-color:${color};">
+        <div class="boss-head">
+          ${portraitHtml}
+          <div class="boss-id">
+            <div class="boss-name">${boss.name}</div>
+            <div class="boss-meta"><span style="color:${color};">${boss.category === "MIXED" ? "MIXED THREAT" : boss.category + " TYPE"}</span> · ${boss.hp} HP · Bounty: ${boss.bountyXp} XP</div>
+          </div>
+          <div class="boss-timer">${slain ? "" : daysLabel}</div>
+        </div>
+        <div class="boss-hp-track">
+          <div class="boss-hp-fill" style="width:${slain ? 0 : hpPct}%;"></div>
+        </div>
+        <div class="boss-hp-text">
+          ${slain
+            ? `<span class="boss-slain-stamp">⚔ SLAIN ${fmtDate(boss.defeatedAt)} — Bounty claimed: +${boss.bountyXp} XP</span>`
+            : `Damage dealt: ${dealt} / ${boss.hp}`}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderBossLog(){
+    const history = (state.bossHistory || []).slice(-12).reverse();
+    if(history.length === 0) return `<div class="empty-note">No past hunts recorded yet. Your first boss awaits its fate.</div>`;
+    return history.map(b=>{
+      const color = (BOSS_POOLS[b.category] || BOSS_POOLS.MIXED).color;
+      return `<div class="boss-log-row">
+        <span class="boss-log-name" style="color:${color};">${b.name}</span>
+        <span class="boss-log-dealt">${b.dealt} / ${b.hp}</span>
+        <span class="boss-log-result ${b.slain ? "win" : "loss"}">${b.slain ? "SLAIN" : "ESCAPED"}</span>
+        <span class="boss-log-week">${fmtDate(b.weekKey)}</span>
+      </div>`;
+    }).join("");
+  }
+
+  function renderJobBoard(){
+    const board = state.board || {contractType:"REST", exerciseIds:[]};
+    const type = board.contractType;
+    const label = CONTRACT_LABELS[type] || type;
+    const color = CONTRACT_COLORS[type] || "var(--blue)";
+    const lastMap = lastLoggedMap();
+    const gateRank = state.gateRank || rankFor(state.level);
+    const gateColor = RANK_COLORS[gateRank];
+
+    const gateSelector = `
+      <div class="gate-select-row">
+        <span class="gate-select-label">GATE RANK${infoBtn("gate")}</span>
+        <div class="gate-pills">
+          ${RANK_ORDER.map(r=>`<button class="gate-pill ${r===gateRank?"active":""}" data-gate-rank="${r}" style="--gate-color:${RANK_COLORS[r]};">${r}</button>`).join("")}
+        </div>
+      </div>
+    `;
+
+    const header = `
+      <div class="board-head">
+        <div>
+          <div class="board-type" style="color:${color};">${label}</div>
+          <div class="board-sub">Posted for ${WEEKDAY_NAMES[todayWeekday()]} · <span style="color:${gateColor};">${gateRank}-Rank Gate</span></div>
+        </div>
+        ${type!=="REST" ? `<button class="btn small ghost" id="rerollBoardBtn">↻ Reroll Board</button>` : ""}
+      </div>
+      ${gateSelector}
+    `;
+
+    if(type === "REST" || board.exerciseIds.length === 0){
+      return header + `<div class="empty-note">No contracts posted today. The Guild recommends rest — but freelance work is always available below.</div>`;
+    }
+
+    const cards = board.exerciseIds.map(id=>{
+      const ex = allExercises().find(e=>e.id===id);
+      if(!ex) return "";
+      const goal = gateScaledGoal(ex, gateRank);
+      const done = todayTotalFor(id);
+      const cleared = done >= goal;
+      const progressPct = Math.min(100, Math.round((done/goal)*100));
+      const unit = ex.type==="time" ? "sec" : ex.type==="minutes" ? "min" : "reps";
+      const last = lastMap[id];
+      const flavor = last ? `Not hunted in ${daysSinceLogged(last)} day${daysSinceLogged(last)===1?"":"s"}` : "New contract — never hunted";
+      const accepted = acceptedContractIds.has(id);
+      const catColor = CONTRACT_COLORS[ex.category];
+      return `
+        <div class="contract-card ${accepted ? "accepted" : ""} ${cleared ? "cleared" : ""}" style="--cat-color:${catColor};">
+          <div class="contract-cat" style="color:${catColor};">${ex.category}</div>
+          <div class="contract-name">${ex.name}</div>
+          <div class="contract-target">Daily Goal: ${goal} ${unit}</div>
+          <div class="goal-progress-row">
+            <div class="goal-progress-track"><div class="goal-progress-fill" style="width:${progressPct}%; background:${cleared ? "var(--green)" : catColor};"></div></div>
+            <span class="goal-progress-text">${done} / ${goal}</span>
+          </div>
+          <div class="contract-flavor">${flavor}</div>
+          ${cleared
+            ? `<div class="contract-cleared">✦ GOAL CLEARED</div>`
+            : accepted
+              ? `<div class="contract-accepted">✓ Accepted — log your sets below</div>`
+              : `<button class="btn small" data-accept="${id}">Accept Contract</button>`}
+        </div>
+      `;
+    }).join("");
+
+    return header + `<div class="board-grid">${cards}</div>`;
+  }
+
+  function renderRosterForm(){
+    return WEEKDAY_NAMES.map((name, idx)=>`
+      <div class="roster-row">
+        <span>${name}</span>
+        <select data-roster-day="${idx}">
+          ${["STR","AGI","VIT","FULL","REST"].map(t=>`<option value="${t}" ${state.roster[idx]===t?"selected":""}>${CONTRACT_LABELS[t]}</option>`).join("")}
+        </select>
+      </div>
+    `).join("");
+  }
+
+  function renderHeatmap(){
+    const days = 84;
+    const today = todayStr();
+    const startOffset = days - 1;
+    const loggedDates = new Set((state.logs||[]).map(l=>l.date));
+
+    const cells = [];
+    for(let i=startOffset; i>=0; i--){
+      const dateStr = addDays(today, -i);
+      const logged = loggedDates.has(dateStr);
+      const cls = logged ? "logged" : "";
+      const isToday = dateStr === today ? " today" : "";
+      const label = logged ? `${dateStr}: quest logged` : `${dateStr}: no quest logged`;
+      cells.push(`<div class="hm-cell ${cls}${isToday}" title="${label}"></div>`);
+    }
+    return `<div class="heatmap">${cells.join("")}</div>`;
+  }
+
+  function renderChartOptions(){
+    const loggedIds = new Set();
+    (state.logs||[]).forEach(l=>l.entries.forEach(e=>loggedIds.add(e.id)));
+    const options = allExercises().filter(e=>loggedIds.has(e.id));
+    if(options.length===0) return `<option value="">—</option>`;
+    if(!selectedChartId || !options.find(o=>o.id===selectedChartId)) selectedChartId = options[0].id;
+    return options.map(ex=>`<option value="${ex.id}" ${ex.id===selectedChartId?"selected":""}>${ex.name}</option>`).join("");
+  }
+
+  function renderProgressChart(){
+    if(!selectedChartId) return `<div class="no-data">Log a quest to start tracking progress.</div>`;
+    const ex = allExercises().find(e=>e.id===selectedChartId);
+    if(!ex) return `<div class="no-data">Log a quest to start tracking progress.</div>`;
+
+    const unitLabel = ex.type==="time" ? "Seconds" : ex.type==="minutes" ? "Minutes" : "Reps";
+
+    const points = [];
+    (state.logs||[]).slice().sort((a,b)=>a.date<b.date?-1:1).forEach(l=>{
+      const entry = l.entries.find(e=>e.id===selectedChartId);
+      if(entry){ points.push({date:l.date, value: entry.sets.reduce((a,c)=>a+c,0)}); }
+    });
+    if(points.length===0) return `<div class="no-data">No entries logged for ${ex.name} yet.</div>`;
+    const recent = points.slice(-14);
+
+    const w = 560, h = 150, padL = 34, padR = 10, padT = 14, padB = 22;
+    const maxVal = Math.max(...recent.map(p=>p.value), 1);
+    const stepX = recent.length>1 ? (w-padL-padR)/(recent.length-1) : 0;
+    const coords = recent.map((p,i)=>{
+      const x = padL + i*stepX;
+      const y = padT + (h-padT-padB) * (1 - p.value/maxVal);
+      return {x,y,...p};
+    });
+    const linePath = coords.map((c,i)=> (i===0?"M":"L") + c.x.toFixed(1) + " " + c.y.toFixed(1)).join(" ");
+    const areaPath = linePath + ` L${coords[coords.length-1].x.toFixed(1)} ${h-padB} L${coords[0].x.toFixed(1)} ${h-padB} Z`;
+
+    const gridLines = [0,0.5,1].map(f=>{
+      const y = padT + (h-padT-padB)*f;
+      return `<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>`;
+    }).join("");
+
+    const yTicks = [
+      {v: maxVal, y: padT},
+      {v: Math.round(maxVal/2), y: padT + (h-padT-padB)*0.5},
+      {v: 0, y: h-padB},
+    ].map(t=>`<text x="${padL-6}" y="${t.y+3}" fill="var(--text-dim2)" font-size="9" text-anchor="end" font-family="JetBrains Mono, monospace">${t.v}</text>`).join("");
+
+    const labels = coords.filter((_,i)=> i===0 || i===coords.length-1 || i===Math.floor(coords.length/2))
+      .map(c=>`<text x="${c.x}" y="${h-4}" fill="var(--text-dim2)" font-size="9" text-anchor="middle" font-family="JetBrains Mono, monospace">${fmtDate(c.date)}</text>`).join("");
+
+    const dots = coords.map(c=>`<circle cx="${c.x}" cy="${c.y}" r="3" fill="#4fc3f7"><title>${fmtDate(c.date)}: ${c.value}</title></circle>`).join("");
+
+    return `
+      <div class="chart-caption">Y-axis: total ${unitLabel.toLowerCase()} of ${ex.name} logged per day &nbsp;·&nbsp; X-axis: date (last ${recent.length} logged session${recent.length===1?"":"s"})</div>
+      <svg class="progress-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#4fc3f7" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="#4fc3f7" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        ${gridLines}
+        <path d="${areaPath}" fill="url(#areaGrad)" stroke="none"/>
+        <path d="${linePath}" fill="none" stroke="#4fc3f7" stroke-width="2"/>
+        ${yTicks}
+        ${dots}
+        ${labels}
+      </svg>
+    `;
+  }
+
+  function renderAchievements(){
+    const unlocked = state.achievements || {};
+    const unlockedCount = ACHIEVEMENTS.filter(a=>unlocked[a.id]).length;
+    const chips = ACHIEVEMENTS.map(a=>{
+      const isUnlocked = !!unlocked[a.id];
+      const isEquipped = state.equippedTitle === a.id;
+      return `
+        <div class="achievement-chip ${isUnlocked?"unlocked":"locked"} ${isEquipped?"equipped":""}">
+          <div class="ach-head">
+            <span class="ach-icon">${isUnlocked ? "🏆" : "🔒"}</span>
+            <span class="ach-name">${a.name}</span>
+          </div>
+          <div class="ach-title">「 ${a.title} 」</div>
+          <div class="ach-desc">${a.desc}</div>
+          ${isUnlocked
+            ? (isEquipped
+                ? `<button class="btn small" data-equip-title="${a.id}">✓ Equipped — Unequip</button>`
+                : `<button class="btn small ghost" data-equip-title="${a.id}">Equip Title</button>`)
+            : `<div class="ach-locked-note">Locked</div>`}
+        </div>
+      `;
+    }).join("");
+    return `<div class="ach-summary">${unlockedCount} / ${ACHIEVEMENTS.length} unlocked</div>` + chips;
+  }
+
+  function toggleEquipTitle(id){
+    if(!state.achievements || !state.achievements[id]) return;
+    state.equippedTitle = (state.equippedTitle === id) ? null : id;
+    saveState();
+    render();
+  }
+
+  function renderHistory(){
+    if(!state.logs || state.logs.length===0) return `<div class="empty-note">No hunts recorded yet. Complete a quest to begin your log.</div>`;
+    const sorted = state.logs.slice().sort((a,b)=> a.date<b.date?1:-1).slice(0,15);
+    return sorted.map(l=>{
+      const items = l.entries.map(e=> `<b>${e.name}</b> ${e.sets.join("/")}${e.type==="time"?"s":e.type==="minutes"?"m":""}`).join(" · ");
+      return `<div class="hist-entry">
+        <div class="hd">
+          <span>${fmtDate(l.date)}</span>
+          <span class="hd-right"><span class="xp">+${l.totalXp} XP</span><button class="remove-log" data-remove-log="${l.date}" title="Remove this workout" aria-label="Remove this workout">✕</button></span>
+        </div>
+        <div class="items">${items}</div>
+      </div>`;
+    }).join("");
+  }
+
+  // Removes an entire logged day and unwinds its effect on Level/XP, streak, and stats
+  // by recomputing everything from the remaining log history.
+  function recomputeFromLogs(){
+    const sorted = state.logs.slice().sort((a,b)=> a.date<b.date?-1:1);
+
+    const totalXp = sorted.reduce((sum,l)=> sum+(l.totalXp||0), 0);
+    state.level = 1;
+    state.xp = totalXp;
+    while(state.xp >= xpToNext(state.level)){
+      state.xp -= xpToNext(state.level);
+      state.level += 1;
+    }
+
+    if(sorted.length === 0){
+      state.streak = 0;
+      state.lastLogDate = null;
+      state.grace.lastUsedDate = null;
+    } else {
+      let streak = 1;
+      let graceLastUsed = null;
+      for(let i=1;i<sorted.length;i++){
+        const prev = sorted[i-1].date, curr = sorted[i].date;
+        const gap = daysBetween(prev, curr);
+        if(gap === 1){
+          streak += 1;
+        } else if(gap === 2){
+          const missed = addDays(prev, 1);
+          const graceAvailable = !graceLastUsed || daysBetween(graceLastUsed, missed) >= GRACE_WINDOW_DAYS;
+          if(graceAvailable){ streak += 1; graceLastUsed = missed; }
+          else { streak = 1; }
+        } else {
+          streak = 1;
+        }
+      }
+      state.streak = streak;
+      state.lastLogDate = sorted[sorted.length-1].date;
+      state.grace.lastUsedDate = graceLastUsed;
+    }
+    checkStreakBreak();
+  }
+
+  function removeLogEntry(date){
+    const log = state.logs.find(l=>l.date===date);
+    if(!log) return;
+    const summary = log.entries.map(e=>e.name).join(", ") || "this workout";
+    showConfirmOverlay(`Remove ${fmtDate(date)} (${summary})? This will also adjust your XP, level, and streak to reflect the removal.`, ()=>{
+      state.logs = state.logs.filter(l=>l.date!==date);
+      recomputeFromLogs();
+      saveState();
+      render();
+    });
+  }
+
+  // ---------- info bubbles ----------
+  let infoPopoverEl = null;
+  function ensureInfoPopover(){
+    if(infoPopoverEl) return infoPopoverEl;
+    infoPopoverEl = document.createElement("div");
+    infoPopoverEl.className = "info-popover";
+    document.body.appendChild(infoPopoverEl);
+    return infoPopoverEl;
+  }
+  function closeInfoPopover(){
+    if(infoPopoverEl){ infoPopoverEl.classList.remove("show"); }
+    document.querySelectorAll(".info-btn.active").forEach(b=>b.classList.remove("active"));
+  }
+  function toggleInfoPopover(key, btnEl){
+    const wasActive = btnEl.classList.contains("active");
+    closeInfoPopover();
+    if(wasActive) return;
+    const content = INFO_CONTENT[key];
+    if(!content) return;
+    const popover = ensureInfoPopover();
+    popover.innerHTML = `<div class="info-title">${content.title}</div><div>${content.text}</div>`;
+    btnEl.classList.add("active");
+    popover.classList.add("show");
+
+    const rect = btnEl.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let left = Math.min(Math.max(12, rect.left), vw - 272);
+    let top = rect.bottom + 8;
+    popover.style.left = left + "px";
+    popover.style.top = top + "px";
+    requestAnimationFrame(()=>{
+      const pRect = popover.getBoundingClientRect();
+      if(pRect.bottom > vh - 12){
+        popover.style.top = Math.max(12, rect.top - pRect.height - 8) + "px";
+      }
+    });
+  }
+  // ---------- flourish: number count-up + level-up flash ----------
+  let displayedValues = { level:0, xp:0, streak:0 };
+  function prefersReducedMotion(){
+    return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+  function animateNumberEl(el, from, to, duration){
+    if(!el) return;
+    if(from === to || prefersReducedMotion()){ el.textContent = to; return; }
+    const start = performance.now();
+    function step(now){
+      const t = Math.min(1, (now-start)/duration);
+      const eased = 1 - Math.pow(1-t, 3);
+      el.textContent = Math.round(from + (to-from)*eased);
+      if(t < 1) requestAnimationFrame(step);
+      else el.textContent = to;
+    }
+    requestAnimationFrame(step);
+  }
+  function animateStatNumbers(){
+    animateNumberEl(document.getElementById("levelNumDisplay"), displayedValues.level, state.level, 550);
+    animateNumberEl(document.getElementById("xpNumDisplay"), displayedValues.xp, state.xp, 550);
+    animateNumberEl(document.getElementById("streakNumDisplay"), displayedValues.streak, state.streak, 550);
+    displayedValues = { level: state.level, xp: state.xp, streak: state.streak };
+  }
+  function triggerLevelUpFlash(){
+    if(prefersReducedMotion()) return;
+    const flash = document.createElement("div");
+    flash.className = "levelup-flash";
+    document.body.appendChild(flash);
+    setTimeout(()=>flash.remove(), 900);
+  }
+
+  function setupInfoBubbles(){
+    document.addEventListener("click", (e)=>{
+      const btn = e.target.closest(".info-btn");
+      if(btn){
+        e.stopPropagation();
+        toggleInfoPopover(btn.dataset.infoKey, btn);
+        return;
+      }
+      if(infoPopoverEl && !infoPopoverEl.contains(e.target)){ closeInfoPopover(); }
+    });
+    window.addEventListener("scroll", closeInfoPopover, {passive:true});
+    window.addEventListener("resize", closeInfoPopover);
+  }
+
+  // ---------- Guild Member Card ----------
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  // Reads an image file, center-crops it to a square, and returns a small JPEG data URL.
+  function resizeImageToDataUrl(file, size){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = (e)=>{
+        const img = new Image();
+        img.onload = ()=>{
+          const side = Math.min(img.width, img.height);
+          const sx = (img.width - side)/2, sy = (img.height - side)/2;
+          const canvas = document.createElement("canvas");
+          canvas.width = size; canvas.height = size;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+          resolve(canvas.toDataURL("image/jpeg", 0.85));
+        };
+        img.onerror = ()=>reject(new Error("Could not load image"));
+        img.src = e.target.result;
+      };
+      reader.onerror = ()=>reject(new Error("Could not read file"));
+      reader.readAsDataURL(file);
+    });
+  }
+  function loadImage(src){
+    return new Promise((resolve)=>{
+      if(!src){ resolve(null); return; }
+      const img = new Image();
+      img.onload = ()=>resolve(img);
+      img.onerror = ()=>resolve(null);
+      img.src = src;
+    });
+  }
+  function shadeColor(hex, percent){
+    const num = parseInt(hex.replace("#",""), 16);
+    let r = (num >> 16) + Math.round(255*(percent/100));
+    let g = ((num >> 8) & 0x00FF) + Math.round(255*(percent/100));
+    let b = (num & 0x0000FF) + Math.round(255*(percent/100));
+    r = Math.max(0, Math.min(255, r));
+    g = Math.max(0, Math.min(255, g));
+    b = Math.max(0, Math.min(255, b));
+    return "#" + (0x1000000 + r*0x10000 + g*0x100 + b).toString(16).slice(1);
+  }
+  function roundedRect(ctx,x,y,w,h,r){
+    w = Math.max(w, 0.001); h = Math.max(h, 0.001);
+    r = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+  function cutCornerPath(ctx,x,y,w,h,cut){
+    ctx.beginPath();
+    ctx.moveTo(x+cut,y);
+    ctx.lineTo(x+w,y);
+    ctx.lineTo(x+w,y+h-cut);
+    ctx.lineTo(x+w-cut,y+h);
+    ctx.lineTo(x,y+h);
+    ctx.lineTo(x,y+cut);
+    ctx.closePath();
+  }
+  function topLeftCutPath(ctx,x,y,w,h,cut){
+    ctx.beginPath();
+    ctx.moveTo(x+cut,y);
+    ctx.lineTo(x+w,y);
+    ctx.lineTo(x+w,y+h);
+    ctx.lineTo(x,y+h);
+    ctx.lineTo(x,y+cut);
+    ctx.closePath();
+  }
+  // Draws img into the target box like CSS object-fit:cover (center-cropped, no distortion).
+  function drawImageCover(ctx, img, x, y, w, h){
+    const imgRatio = img.width/img.height, boxRatio = w/h;
+    let sx, sy, sw, sh;
+    if(imgRatio > boxRatio){
+      sh = img.height; sw = sh*boxRatio; sx = (img.width-sw)/2; sy = 0;
+    } else {
+      sw = img.width; sh = sw/boxRatio; sx = 0; sy = (img.height-sh)/2;
+    }
+    ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+  }
+  // Deterministic decorative barcode, seeded from the hunter ID so it's stable, not random per render.
+  function drawBarcode(ctx, x, y, w, h, seedStr, color){
+    let seed = 0;
+    for(let i=0;i<seedStr.length;i++){ seed = (seed*31 + seedStr.charCodeAt(i)) >>> 0; }
+    function rand(){ seed = (seed*1103515245 + 12345) >>> 0; return (seed % 1000)/1000; }
+    ctx.fillStyle = color;
+    let cx = x;
+    while(cx < x+w){
+      const bw = 1 + rand()*3;
+      if(rand() > 0.35){ ctx.fillRect(cx, y, bw, h); }
+      cx += bw + 1 + rand()*2;
+    }
+  }
+
+  function renderGuildCard(canvas, avatarImg){
+    const ctx = canvas.getContext("2d");
+    const scale = canvas.width / 1000;
+    ctx.save();
+    ctx.scale(scale, scale);
+    const W = 1000, H = 600;
+    ctx.clearRect(0,0,W,H);
+
+    const bg = ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0, "#0d1530");
+    bg.addColorStop(1, "#05070f");
+    ctx.fillStyle = bg;
+    cutCornerPath(ctx, 8, 8, W-16, H-16, 28);
+    ctx.fill();
+
+    const rank = rankFor(state.level);
+    const rankColor = RANK_COLORS[rank];
+
+    const glow = ctx.createRadialGradient(W*0.5,0,50, W*0.5,0,650);
+    glow.addColorStop(0, "rgba(79,195,247,0.14)");
+    glow.addColorStop(1, "rgba(79,195,247,0)");
+    ctx.fillStyle = glow;
+    cutCornerPath(ctx, 8, 8, W-16, H-16, 28);
+    ctx.fill();
+
+    ctx.save();
+    ctx.strokeStyle = rankColor;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = rankColor;
+    ctx.shadowBlur = 24;
+    cutCornerPath(ctx, 8, 8, W-16, H-16, 28);
+    ctx.stroke();
+    ctx.restore();
+
+    // Clip everything else to the card's own cut-corner shape so nothing bleeds into the corner notches
+    ctx.save();
+    cutCornerPath(ctx, 8, 8, W-16, H-16, 28);
+    ctx.clip();
+
+    // Solid rank-colored accent strip along the top edge — immediate rank read at a glance
+    ctx.fillStyle = rankColor;
+    ctx.fillRect(8, 8, W-16, 6);
+
+    // ---- Photo panel (left, full-bleed, dominant, untouched by rank UI) ----
+    const photoX=8, photoY=14, photoW=330, photoH=H-22;
+    ctx.save();
+    topLeftCutPath(ctx, photoX, photoY, photoW, photoH, 22);
+    ctx.clip();
+    ctx.fillStyle = "#0a0f22";
+    ctx.fillRect(photoX, photoY, photoW, photoH);
+    if(avatarImg){
+      drawImageCover(ctx, avatarImg, photoX, photoY, photoW, photoH);
+      const shade = ctx.createLinearGradient(0, photoY+photoH-170, 0, photoY+photoH);
+      shade.addColorStop(0, "rgba(5,7,15,0)");
+      shade.addColorStop(1, "rgba(5,7,15,0.9)");
+      ctx.fillStyle = shade;
+      ctx.fillRect(photoX, photoY, photoW, photoH);
+    } else {
+      ctx.fillStyle = "#232d4d";
+      ctx.font = "130px Rajdhani, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("◈", photoX+photoW/2, photoY+photoH/2+45);
+      ctx.textAlign = "left";
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = rankColor;
+    ctx.lineWidth = 2;
+    ctx.shadowColor = rankColor;
+    ctx.shadowBlur = 12;
+    topLeftCutPath(ctx, photoX, photoY, photoW, photoH, 22);
+    ctx.stroke();
+    ctx.restore();
+
+    // Hunter name + title + ID overlaid on lower photo (license-photo caption style)
+    const name = (state.hunterName && state.hunterName.trim()) || "Unnamed Hunter";
+    const cardTitle = equippedTitleText();
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 26px Orbitron, sans-serif";
+    ctx.fillText(name, photoX+22, photoY+photoH-(cardTitle?74:50), photoW-44);
+    if(cardTitle){
+      ctx.fillStyle = "#f6c453";
+      ctx.font = "600 15px Rajdhani, sans-serif";
+      ctx.fillText("「 " + cardTitle + " 」", photoX+22, photoY+photoH-50, photoW-44);
+    }
+    ctx.fillStyle = "#c7d3ee";
+    ctx.font = "600 14px 'JetBrains Mono', monospace";
+    ctx.fillText(state.hunterId || "—", photoX+22, photoY+photoH-24);
+
+    // ---- Divider between photo and info panel ----
+    const dividerX = photoX + photoW + 17;
+    ctx.strokeStyle = "rgba(94,169,255,0.28)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(dividerX, photoY+6); ctx.lineTo(dividerX, photoY+photoH-6); ctx.stroke();
+
+    // ---- Info panel (right) ----
+    const rx = photoX + photoW + 34;
+    const rw = W - 22 - rx;
+
+    ctx.fillStyle = "#5b6a94";
+    ctx.font = "700 12px Orbitron, sans-serif";
+    ctx.fillText("◆ SHADOW LOG ◆", rx, 32);
+
+    // Rank hero block — the card's focal point, entirely off the photo
+    const badgeSize = 100, badgeY = 56;
+    ctx.save();
+    ctx.shadowColor = rankColor; ctx.shadowBlur = 26;
+    const badgeGrad = ctx.createLinearGradient(rx, badgeY, rx, badgeY+badgeSize);
+    badgeGrad.addColorStop(0, rankColor);
+    badgeGrad.addColorStop(1, shadeColor(rankColor, -30));
+    ctx.fillStyle = badgeGrad;
+    cutCornerPath(ctx, rx, badgeY, badgeSize, badgeSize, 14);
+    ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = "rgba(255,255,255,0.5)";
+    ctx.lineWidth = 1.5;
+    cutCornerPath(ctx, rx, badgeY, badgeSize, badgeSize, 14);
+    ctx.stroke();
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#05070f";
+    ctx.font = "900 52px Orbitron, sans-serif";
+    ctx.fillText(rank, rx+badgeSize/2, badgeY+badgeSize/2+19);
+    ctx.textAlign = "left";
+
+    const heroTextX = rx + badgeSize + 26;
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 32px 'JetBrains Mono', monospace";
+    ctx.fillText("LEVEL " + state.level, heroTextX, badgeY+44);
+    ctx.fillStyle = rankColor;
+    ctx.font = "700 17px Rajdhani, sans-serif";
+    ctx.fillText(rank + "-RANK HUNTER", heroTextX, badgeY+74);
+
+    const dividerY = badgeY + badgeSize + 26;
+    ctx.strokeStyle = "rgba(255,255,255,0.22)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(rx, dividerY); ctx.lineTo(rx+rw, dividerY); ctx.stroke();
+
+    // XP bar
+    const need = xpToNext(state.level);
+    const barX=rx, barY=dividerY+26, barW=rw, barH=16;
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    roundedRect(ctx,barX,barY,barW,barH,7); ctx.fill();
+    const pct = Math.min(1, state.xp/need);
+    const xpFillW = pct>0 ? Math.max(barW*pct, 7) : 0;
+    const xpGrad = ctx.createLinearGradient(barX,0,barX+barW,0);
+    xpGrad.addColorStop(0,"#2b6f96"); xpGrad.addColorStop(1,"#4fc3f7");
+    ctx.fillStyle = xpGrad;
+    ctx.shadowColor = "#4fc3f7"; ctx.shadowBlur = 8;
+    roundedRect(ctx,barX,barY,xpFillW,barH,7); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#a3aed0";
+    ctx.font = "600 14px 'JetBrains Mono', monospace";
+    ctx.fillText("XP " + state.xp + " / " + need, barX, barY+36);
+
+    // STR / AGI / VIT — dynamically measured so labels never collide
+    const stats = categoryPoints();
+    const statColors = { STR:"#ff8a7a", AGI:"#7ce0a0", VIT:"#8fb8ff" };
+    let statY = barY + 70;
+    ["STR","AGI","VIT"].forEach(cat=>{
+      const val = stats[cat] || 0;
+      const info = tierInfo(val);
+      const fillPct = tierFillPct(val)/100;
+
+      ctx.font = "700 16px Orbitron, sans-serif";
+      ctx.fillStyle = statColors[cat];
+      ctx.fillText(cat, rx, statY);
+      const catWidth = ctx.measureText(cat).width;
+
+      ctx.font = "600 14px Rajdhani, sans-serif";
+      ctx.fillStyle = "#b7c1e0";
+      ctx.fillText("TIER " + info.label, rx + catWidth + 14, statY);
+
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#e7ecfb";
+      ctx.font = "600 14px 'JetBrains Mono', monospace";
+      ctx.fillText(info.tier===3 ? val+" / MAX" : val+" / "+info.cap, rx+rw, statY);
+      ctx.textAlign = "left";
+
+      const sbY=statY+12, sbH=9;
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      roundedRect(ctx,rx,sbY,rw,sbH,4); ctx.fill();
+      ctx.fillStyle = statColors[cat];
+      ctx.shadowColor = statColors[cat]; ctx.shadowBlur = 6;
+      const statFillW = fillPct>0 ? Math.max(rw*fillPct, 7) : 0;
+      roundedRect(ctx,rx,sbY,statFillW,sbH,4); ctx.fill();
+      ctx.shadowBlur = 0;
+      statY += 56;
+    });
+
+    // Record stats panel — bordered module with a rank-colored top accent
+    const panelY = statY + 6;
+    const panelH = H - 40 - panelY - 18;
+    ctx.fillStyle = "rgba(0,0,0,0.28)";
+    roundedRect(ctx, rx, panelY, rw, panelH, 8); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.16)";
+    ctx.lineWidth = 1;
+    roundedRect(ctx, rx, panelY, rw, panelH, 8); ctx.stroke();
+    ctx.fillStyle = rankColor;
+    roundedRect(ctx, rx, panelY, rw, 4, 2); ctx.fill();
+
+    const longest = computeLongestStreak();
+    const totalDays = (state.logs||[]).length;
+    const colW = rw/3;
+    function statBlock(label, value, color, colIdx, y){
+      const bx = rx + colIdx*colW + colW/2;
+      ctx.textAlign = "center";
+      ctx.fillStyle = color;
+      ctx.font = "900 38px Orbitron, sans-serif";
+      ctx.shadowColor = color; ctx.shadowBlur = 10;
+      ctx.fillText(String(value), bx, y);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#c3cce6";
+      ctx.font = "600 13px Rajdhani, sans-serif";
+      ctx.fillText(label.toUpperCase(), bx, y+24);
+      ctx.textAlign = "left";
+    }
+    const streakY = panelY + panelH/2 + 8;
+    statBlock("Hunt Streak", state.streak, "#f6c453", 0, streakY);
+    statBlock("Longest Streak", longest, "#f6c453", 1, streakY);
+    statBlock("Days Hunted", totalDays, "#4fc3f7", 2, streakY);
+    // vertical separators inside the panel
+    ctx.strokeStyle = "rgba(255,255,255,0.14)";
+    [1,2].forEach(i=>{
+      const lx = rx + colW*i;
+      ctx.beginPath(); ctx.moveTo(lx, panelY+18); ctx.lineTo(lx, panelY+panelH-14); ctx.stroke();
+    });
+
+    // Footer + barcode
+    ctx.fillStyle = "#a3aed0";
+    ctx.font = "600 13px 'JetBrains Mono', monospace";
+    const dateStr = new Date().toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"});
+    ctx.fillText("Issued via Shadow Log · " + dateStr, rx, H-40);
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    roundedRect(ctx, rx, H-34, rw, 20, 3); ctx.fill();
+    drawBarcode(ctx, rx+8, H-30, rw-16, 12, state.hunterId || "SHADOWLOG", "#0a0f22");
+
+    ctx.restore(); // closes clip-to-card-shape save
+    ctx.restore(); // closes DPR scale save
+  }
+
+  function drawCardWhenReady(canvas){
+    const fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready.catch(()=>null) : Promise.resolve();
+    const avatarReady = loadImage(state.hunterAvatar);
+    Promise.all([fontsReady, avatarReady]).then(([_, avatarImg])=>{
+      renderGuildCard(canvas, avatarImg);
+    });
+  }
+
+  function downloadCanvasImage(canvas, filename){
+    try{
+      const url = canvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }catch(err){
+      console.error("Card download failed", err);
+    }
+  }
+
+  function showExerciseManagerOverlay(){
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `
+      <div class="sys-window card-window" style="max-width:520px;">
+        <div class="tag">◆ SETTINGS ◆</div>
+        <h3>MANAGE EXERCISES</h3>
+        <div style="text-align:left;">
+          <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin-bottom:8px;">ADD NEW EXERCISE</label>
+          <div class="builder-row" style="margin-bottom:18px;">
+            <input type="text" id="mgrCustomName" placeholder="Exercise name" class="settings-input" style="flex:2; min-width:120px;" />
+            <select id="mgrCustomCategory">
+              <option value="STR">STR</option>
+              <option value="AGI">AGI</option>
+              <option value="VIT">VIT</option>
+            </select>
+            <select id="mgrCustomType">
+              <option value="reps">reps</option>
+              <option value="time">seconds</option>
+              <option value="minutes">minutes</option>
+            </select>
+            <button class="btn small" id="mgrAddCustomBtn">Add</button>
+          </div>
+          <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin-bottom:8px;">EXISTING EXERCISES</label>
+          <div id="mgrExerciseList" style="max-height:280px; overflow-y:auto;">${renderExerciseManager()}</div>
+        </div>
+        <div style="display:flex; justify-content:center; margin-top:20px;">
+          <button class="btn primary" id="closeMgrBtn">Done</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(()=>overlay.classList.add("show"));
+
+    function refreshList(){
+      const listEl = overlay.querySelector("#mgrExerciseList");
+      if(listEl) listEl.innerHTML = renderExerciseManager();
+      bindListButtons();
+    }
+    function bindListButtons(){
+      overlay.querySelectorAll("[data-toggle-exercise]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          toggleExerciseVisibility(btn.dataset.toggleExercise);
+          refreshList();
+        });
+      });
+      overlay.querySelectorAll("[data-goal-exercise]").forEach(input=>{
+        input.addEventListener("change", ()=>{
+          setDailyGoal(input.dataset.goalExercise, input.value);
+          render(); // refresh the job board goals behind the overlay
+        });
+      });
+    }
+    bindListButtons();
+
+    const nameInput = overlay.querySelector("#mgrCustomName");
+    overlay.querySelector("#mgrAddCustomBtn").addEventListener("click", ()=>{
+      const name = nameInput.value.trim();
+      if(!name){ nameInput.focus(); return; }
+      const category = overlay.querySelector("#mgrCustomCategory").value;
+      const type = overlay.querySelector("#mgrCustomType").value;
+      const id = "c_" + name.toLowerCase().replace(/[^a-z0-9]+/g,"-") + "_" + Date.now().toString(36);
+      state.customExercises.push({id, name, category, type});
+      saveState();
+      nameInput.value = "";
+      refreshList();
+      render();
+    });
+    nameInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); overlay.querySelector("#mgrAddCustomBtn").click(); } });
+
+    function close(){
+      overlay.classList.remove("show");
+      setTimeout(()=>overlay.remove(), 250);
+    }
+    overlay.querySelector("#closeMgrBtn").addEventListener("click", close);
+    overlay.addEventListener("click", (e)=>{ if(e.target===overlay) close(); });
+  }
+
+  // ---------- data backup (export / import) ----------
+  function exportData(){
+    try{
+      const payload = {
+        app: "shadow-log",
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        state: state,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "shadow-log-backup-" + todayStr() + ".json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 1000);
+      return true;
+    }catch(err){
+      console.error("Export failed", err);
+      return false;
+    }
+  }
+
+  function validateBackup(parsed){
+    // Accept both wrapped payloads ({app, version, state}) and a raw state object.
+    const s = (parsed && parsed.app === "shadow-log" && parsed.state) ? parsed.state : parsed;
+    if(!s || typeof s !== "object") return null;
+    if(typeof s.level !== "number" || typeof s.xp !== "number" || !Array.isArray(s.logs)) return null;
+    return s;
+  }
+
+  function importDataFromFile(file, statusEl){
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      let imported = null;
+      try{ imported = validateBackup(JSON.parse(e.target.result)); }
+      catch(err){ imported = null; }
+      if(!imported){
+        if(statusEl) statusEl.textContent = "That file doesn't look like a Shadow Log backup.";
+        return;
+      }
+      const logCount = imported.logs.length;
+      showConfirmOverlay(`Restore backup (Level ${imported.level}, ${logCount} logged day${logCount===1?"":"s"})? This will REPLACE all current progress.`, ()=>{
+        state = Object.assign(defaultState(), imported);
+        builder = [];
+        selectedChartId = null;
+        acceptedContractIds = new Set();
+        // Reconcile derived state the same way a fresh page load does, so nothing
+        // looks "lost" (achievements, boss status) until the next reload.
+        checkStreakBreak();
+        ensureWeeklyBoss();
+        const bounty = processBossSlay();
+        if(bounty > 0){ addXp(bounty); }
+        checkAchievements();
+        saveState();
+        render();
+      });
+    };
+    reader.onerror = ()=>{ if(statusEl) statusEl.textContent = "Couldn't read that file."; };
+    reader.readAsText(file);
+  }
+
+  function showSettingsOverlay(){
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `
+      <div class="sys-window">
+        <div class="tag">◆ SETTINGS ◆</div>
+        <h3>HUNTER PROFILE</h3>
+        <div style="text-align:left;">
+          <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin-bottom:6px;">AVATAR</label>
+          <div class="avatar-settings-row">
+            <div class="hunter-avatar-frame avatar-preview-frame" id="avatarPreviewFrame">
+              ${state.hunterAvatar ? `<img src="${state.hunterAvatar}" alt="Avatar preview" id="avatarPreviewImg" />` : `<span class="avatar-placeholder" id="avatarPreviewPlaceholder">◈</span>`}
+            </div>
+            <div class="avatar-settings-actions">
+              <button class="btn small" id="uploadAvatarBtn" type="button">Upload Image</button>
+              ${state.hunterAvatar ? `<button class="btn small ghost" id="removeAvatarBtn" type="button">Remove</button>` : ""}
+              <input type="file" id="avatarFileInput" accept="image/*" style="display:none;" />
+            </div>
+          </div>
+          <div id="avatarStatusMsg" class="avatar-status-msg"></div>
+          <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin:16px 0 6px;">HUNTER NAME</label>
+          <input type="text" id="settingsHunterNameInput" maxlength="24" placeholder="Enter Hunter Name" value="${escapeHtml(state.hunterName||"")}" class="settings-input" />
+          <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin:18px 0 6px;">DATA BACKUP</label>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn small" id="exportDataBtn" type="button">⬇ Export Backup</button>
+            <button class="btn small ghost" id="importDataBtn" type="button">⬆ Import Backup</button>
+            <input type="file" id="importFileInput" accept="application/json,.json" style="display:none;" />
+          </div>
+          <div id="backupStatusMsg" class="avatar-status-msg"></div>
+          <div style="font-size:11px; color:var(--text-dim2); line-height:1.4; margin-top:4px;">Export downloads your full progress as a JSON file. Import restores from one — replacing whatever is currently saved. Useful for moving between devices or safeguarding a standalone (browser-saved) copy.</div>
+        </div>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
+          <button class="btn ghost" id="closeSettingsBtn">Cancel</button>
+          <button class="btn primary" id="saveSettingsBtn">Save</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(()=>overlay.classList.add("show"));
+
+    const input = overlay.querySelector("#settingsHunterNameInput");
+    input.focus();
+
+    const uploadBtn = overlay.querySelector("#uploadAvatarBtn");
+    const fileInput = overlay.querySelector("#avatarFileInput");
+    const statusMsg = overlay.querySelector("#avatarStatusMsg");
+    function refreshAvatarPreview(){
+      const frame = overlay.querySelector("#avatarPreviewFrame");
+      frame.innerHTML = state.hunterAvatar
+        ? `<img src="${state.hunterAvatar}" alt="Avatar preview" id="avatarPreviewImg" />`
+        : `<span class="avatar-placeholder" id="avatarPreviewPlaceholder">◈</span>`;
+      const removeBtn = overlay.querySelector("#removeAvatarBtn");
+      const actionsRow = overlay.querySelector(".avatar-settings-actions");
+      if(state.hunterAvatar && !removeBtn){
+        const btn = document.createElement("button");
+        btn.className = "btn small ghost";
+        btn.type = "button";
+        btn.id = "removeAvatarBtn";
+        btn.textContent = "Remove";
+        actionsRow.insertBefore(btn, fileInput);
+        btn.addEventListener("click", removeAvatar);
+      } else if(!state.hunterAvatar && removeBtn){
+        removeBtn.remove();
+      }
+    }
+    function removeAvatar(){
+      state.hunterAvatar = null;
+      saveState();
+      refreshAvatarPreview();
+      statusMsg.textContent = "";
+    }
+    uploadBtn.addEventListener("click", ()=>fileInput.click());
+    const existingRemoveBtn = overlay.querySelector("#removeAvatarBtn");
+    if(existingRemoveBtn){ existingRemoveBtn.addEventListener("click", removeAvatar); }
+    fileInput.addEventListener("change", async ()=>{
+      const file = fileInput.files[0];
+      if(!file) return;
+      if(!file.type.startsWith("image/")){
+        statusMsg.textContent = "Please choose an image file.";
+        return;
+      }
+      statusMsg.textContent = "Processing image…";
+      try{
+        const dataUrl = await resizeImageToDataUrl(file, 640);
+        state.hunterAvatar = dataUrl;
+        saveState();
+        refreshAvatarPreview();
+        statusMsg.textContent = "Avatar updated.";
+      }catch(err){
+        console.error("Avatar processing failed", err);
+        statusMsg.textContent = "Couldn't process that image — try a different file.";
+      }
+      fileInput.value = "";
+    });
+
+    const backupStatus = overlay.querySelector("#backupStatusMsg");
+    overlay.querySelector("#exportDataBtn").addEventListener("click", ()=>{
+      const ok = exportData();
+      backupStatus.textContent = ok
+        ? "Backup downloaded. Keep it somewhere safe, Hunter."
+        : "Export failed — try right-clicking the app and checking the console.";
+    });
+    const importFileInput = overlay.querySelector("#importFileInput");
+    overlay.querySelector("#importDataBtn").addEventListener("click", ()=>importFileInput.click());
+    importFileInput.addEventListener("change", ()=>{
+      const file = importFileInput.files[0];
+      if(!file) return;
+      close();
+      importDataFromFile(file, null);
+      importFileInput.value = "";
+    });
+
+    function close(){
+      overlay.classList.remove("show");
+      setTimeout(()=>overlay.remove(), 250);
+    }
+    function save(){
+      state.hunterName = (input.value||"").trim();
+      saveState();
+      close();
+      render();
+    }
+    overlay.querySelector("#saveSettingsBtn").addEventListener("click", save);
+    overlay.querySelector("#closeSettingsBtn").addEventListener("click", close);
+    input.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); save(); } });
+    overlay.addEventListener("click", (e)=>{ if(e.target===overlay) close(); });
+  }
+
+  function showGuildCardOverlay(){
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `
+      <div class="sys-window card-window">
+        <div class="tag">◆ SNAPSHOT ◆</div>
+        <h3>GUILD MEMBER CARD</h3>
+        <canvas id="guildCardCanvas" width="2000" height="1200" class="guild-card-canvas"></canvas>
+        <div class="card-actions">
+          <button class="btn primary" id="downloadCardBtn">⬇ Download Card</button>
+          <button class="btn ghost" id="closeCardBtn">Close</button>
+        </div>
+        <div class="card-hint">If the download doesn't start automatically, right-click (or long-press on mobile) the card above and choose "Save image."${!state.hunterName ? ` Set your Hunter Name at the top of the app to have it appear here.` : ""}</div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(()=>overlay.classList.add("show"));
+
+    const canvas = overlay.querySelector("#guildCardCanvas");
+    drawCardWhenReady(canvas);
+
+    overlay.querySelector("#downloadCardBtn").addEventListener("click", ()=>{
+      const safeName = (state.hunterName||"hunter").trim().replace(/[^a-z0-9]+/gi,"-").toLowerCase() || "hunter";
+      downloadCanvasImage(canvas, `shadow-log-card-${safeName}.png`);
+    });
+
+    function close(){
+      overlay.classList.remove("show");
+      setTimeout(()=>overlay.remove(), 250);
+    }
+    overlay.querySelector("#closeCardBtn").addEventListener("click", close);
+    overlay.addEventListener("click", (e)=>{ if(e.target===overlay) close(); });
+  }
+
+  function showConfirmOverlay(message, onConfirm){
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `
+      <div class="sys-window">
+        <div class="tag">◆ SYSTEM WARNING ◆</div>
+        <h3>CONFIRM ACTION</h3>
+        <div class="line">${message}</div>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
+          <button class="btn ghost" id="cancelConfirm">Cancel</button>
+          <button class="btn primary" id="proceedConfirm">Confirm</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(()=>overlay.classList.add("show"));
+    function close(){
+      overlay.classList.remove("show");
+      setTimeout(()=>overlay.remove(), 250);
+    }
+    overlay.querySelector("#cancelConfirm").addEventListener("click", close);
+    overlay.querySelector("#proceedConfirm").addEventListener("click", ()=>{ close(); onConfirm(); });
+    overlay.addEventListener("click", (e)=>{ if(e.target===overlay) close(); });
+  }
+
+  function showSystemWindow(xpGained, leveledUp, rankedUp, tierUps, bonusPct, bonusXp, usedGrace, newAchievements, bossInfo, penaltyRestoredTo){
+    tierUps = tierUps || [];
+    newAchievements = newAchievements || [];
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `
+      <div class="sys-window">
+        <div class="tag">◆ SYSTEM NOTICE ◆</div>
+        <h3>QUEST CLEARED</h3>
+        <div class="line">XP gained: <b>+${xpGained}</b></div>
+        ${bonusXp ? `<div class="line">Streak Bonus (${bonusPct}%): <b>+${bonusXp}</b></div>` : ""}
+        ${usedGrace ? `<div class="line" style="color:var(--gold);">🛡 Rest Day used — streak protected.</div>` : ""}
+        ${penaltyRestoredTo ? `<div class="rankup penalty-restored-banner">⚖ PENALTY QUEST CLEARED — Streak restored to ${penaltyRestoredTo}</div>` : ""}
+        ${bossInfo && bossInfo.active && !bossInfo.slainNow ? `<div class="line boss-damage-line">⚔ Boss damage: −${bossInfo.damage} HP (${bossInfo.remaining} remaining)</div>` : ""}
+        ${bossInfo && bossInfo.slainNow ? `<div class="rankup boss-slain-banner">⚔ BOSS SLAIN — ${bossInfo.name}</div><div class="line">Bounty: <b style="color:var(--gold);">+${bossInfo.bounty} XP</b></div>` : ""}
+        ${leveledUp ? `<div class="line">You have reached <b>Level ${state.level}</b>.</div>` : ""}
+        ${rankedUp ? `<div class="rankup">RANK UP → ${rankedUp}-RANK HUNTER</div>` : ""}
+        ${tierUps.map(t=>`<div class="rankup" style="color:var(--blue);text-shadow:0 0 12px rgba(79,195,247,0.5);">${t.cat} TIER UP → ${t.label}</div>`).join("")}
+        ${newAchievements.map(a=>`<div class="rankup achievement-unlock">🏆 ACHIEVEMENT — ${a.name}<span class="achievement-title-line">Title unlocked: "${a.title}"</span></div>`).join("")}
+        <button class="btn primary" id="closeSysWindow">Continue</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(()=>overlay.classList.add("show"));
+    function close(){
+      overlay.classList.remove("show");
+      setTimeout(()=>overlay.remove(), 250);
+    }
+    overlay.querySelector("#closeSysWindow").addEventListener("click", close);
+    overlay.addEventListener("click", (e)=>{ if(e.target===overlay) close(); });
+  }
+
+  function bindEvents(){
+    const openCardBtn = document.getElementById("openCardBtn");
+    if(openCardBtn){ openCardBtn.addEventListener("click", showGuildCardOverlay); }
+
+    document.querySelectorAll("[data-equip-title]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{ toggleEquipTitle(btn.dataset.equipTitle); });
+    });
+
+    document.querySelectorAll("[data-remove-log]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{ removeLogEntry(btn.dataset.removeLog); });
+    });
+
+    const rerollBtn = document.getElementById("rerollBoardBtn");
+    if(rerollBtn){ rerollBtn.addEventListener("click", rerollBoard); }
+
+    document.querySelectorAll("[data-gate-rank]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{ setGateRank(btn.dataset.gateRank); });
+    });
+
+    document.querySelectorAll("[data-accept]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{ acceptContract(btn.dataset.accept); });
+    });
+
+    const toggleRoster = document.getElementById("toggleRoster");
+    if(toggleRoster){
+      toggleRoster.addEventListener("click", ()=>{ rosterFormOpen = !rosterFormOpen; render(); });
+    }
+    const toggleBossLog = document.getElementById("toggleBossLog");
+    if(toggleBossLog){
+      toggleBossLog.addEventListener("click", ()=>{ bossLogOpen = !bossLogOpen; render(); });
+    }
+    document.querySelectorAll("[data-roster-day]").forEach(sel=>{
+      sel.addEventListener("change", ()=>{
+        const day = parseInt(sel.dataset.rosterDay, 10);
+        state.roster[day] = sel.value;
+        saveState();
+        render();
+      });
+    });
+
+    const exerciseSelect = document.getElementById("exerciseSelect");
+    const setValueInput = document.getElementById("setValueInput");
+    if(exerciseSelect){
+      exerciseSelect.addEventListener("change", ()=>{ setValueInput.placeholder = currentPlaceholder(); });
+    }
+
+    const addSetBtn = document.getElementById("addSetBtn");
+    if(addSetBtn){
+      addSetBtn.addEventListener("click", ()=>{
+        const id = exerciseSelect.value;
+        const ex = allExercises().find(e=>e.id===id);
+        const val = parseInt(setValueInput.value, 10);
+        if(!ex || !val || val<=0){ setValueInput.focus(); return; }
+        let entry = builder.find(b=>b.id===id);
+        if(!entry){ entry = {id:ex.id, name:ex.name, category:ex.category, type:ex.type, sets:[]}; builder.push(entry); }
+        entry.sets.push(val);
+        setValueInput.value = "";
+        render();
+        document.getElementById("exerciseSelect").value = id;
+        document.getElementById("setValueInput").focus();
+      });
+    }
+    if(setValueInput){
+      setValueInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); addSetBtn.click(); } });
+    }
+
+    const openExerciseMgrBtn = document.getElementById("openExerciseMgrBtn");
+    if(openExerciseMgrBtn){
+      openExerciseMgrBtn.addEventListener("click", showExerciseManagerOverlay);
+    }
+
+    document.querySelectorAll(".pill-row .remove").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        builder.splice(parseInt(btn.dataset.idx,10),1);
+        render();
+      });
+    });
+
+    const completeBtn = document.getElementById("completeQuestBtn");
+    if(completeBtn){ completeBtn.addEventListener("click", completeQuest); }
+
+    const chartSelect = document.getElementById("chartSelect");
+    if(chartSelect){
+      chartSelect.addEventListener("change", ()=>{ selectedChartId = chartSelect.value; render(); });
+    }
+
+    const retrySaveBtn = document.getElementById("retrySaveBtn");
+    if(retrySaveBtn){
+      retrySaveBtn.addEventListener("click", retrySaveNow);
+    }
+
+    const resetBtn = document.getElementById("resetBtn");
+    if(resetBtn){
+      resetBtn.addEventListener("click", ()=>{
+        showConfirmOverlay("Reset all Shadow Log data? This cannot be undone.", async ()=>{
+          state = defaultState();
+          builder = [];
+          selectedChartId = null;
+          acceptedContractIds = new Set();
+          rosterFormOpen = false;
+          await saveState();
+          render();
+        });
+      });
+    }
+  }
+
+  // ---------- init ----------
+  async function init(){
+    state = await loadState();
+    checkStreakBreak();
+    // Weekly boss reconcile: spawn/rollover, then silently process a kill that
+    // imported or backdated data may have already earned (bounty still awarded).
+    ensureWeeklyBoss();
+    const loadBounty = processBossSlay();
+    if(loadBounty > 0){ addXp(loadBounty); }
+    // Retroactive unlocks for progress earned before this feature existed (silent — no popup on load)
+    const retro = checkAchievements();
+    if(retro.length > 0 || loadBounty > 0){ saveState(); }
+    setupInfoBubbles();
+    const settingsBtn = document.getElementById("settingsBtn");
+    if(settingsBtn){ settingsBtn.addEventListener("click", showSettingsOverlay); }
+    render();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
