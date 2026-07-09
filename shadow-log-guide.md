@@ -62,7 +62,7 @@ Neither mode is "better" — just pick based on what you want: Claude sync if yo
 ### Daily Goals & Gate Rank
 - Every exercise has a **Daily Goal** — a real target to push toward (e.g. 50 push-ups), not just "log something." Set your own baseline per exercise via the **⚙ icon on the Freelance Quest panel**; leave it blank to use the sensible default.
 - Goals are **cumulative for the day** — every set across every quest you log counts toward them. Hit your goal and it's cleared for the day.
-- **Gate Rank** (E through S, selectable on the Job Board) scales your goals up, the same way gates have difficulty ranks in the show — an S-Gate goal is roughly **9× harder** than an E-Gate one. It defaults to your Hunter Rank but you can raise or lower it any time to push yourself harder (or ease off).
+- **Gate Rank** (E through S, selectable on the Job Board) scales your goals up, the same way gates have difficulty ranks in the show — D-Gate is 1.25× your baseline, C is 1.5×, climbing to **2.5× at S-Gate**. It defaults to your Hunter Rank but you can raise or lower it any time to push yourself harder (or ease off).
 
 ### Guild Job Board
 - Each day posts a set of suggested "contracts" (exercises) based on a weekly roster you can customize: Strength day, Agility day, Vitality day, Full Hunt (mix of all three), or Guild Holiday (rest day). Edit the roster from "⚙ Edit guild roster" on the board.

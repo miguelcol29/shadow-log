@@ -815,9 +815,9 @@
   const RANK_ORDER = ["E","D","C","B","A","S"];
   const SYNC_STATUS_TEXT = { idle:"", saving:"◆ Saving…", retrying:"⚠ Connection hiccup — retrying save…", stalled:"⚠ Not saving right now — your progress is safe on screen, but reload will lose it." };
   const GATE_TARGETS = {
-    reps:    { E:12, D:25, C:40, B:55, A:80,  S:110 },
-    time:    { E:20, D:35, C:50, B:70, A:95,  S:130 },
-    minutes: { E:10, D:15, C:20, B:28, A:38,  S:50  },
+    reps:    { E:12, D:15, C:18, B:22, A:26, S:30 },
+    time:    { E:20, D:25, C:30, B:37, A:43, S:50 },
+    minutes: { E:10, D:13, C:15, B:18, A:22, S:25 },
   };
   // Custom daily goal (base, at E-Gate) for an exercise, falling back to the default table.
   function baseGoalFor(ex){
@@ -852,7 +852,7 @@
     vit: { title:"VIT", text:"Counts distinct Vitality exercises you've logged — 1 point per exercise per day (2 different VIT moves in one day = 2 points). Tier I: 0–100. Tier II: 100–1000, progress carries over. Tier MAX once you pass 1000, no further cap." },
     streak: { title:"HUNT STREAK", text:"Counts consecutive days you've logged a quest. Logging today after logging yesterday adds 1. You also get 1 Rest Day of grace per rolling 7-day period — miss a single day and your streak still carries through, no XP or progress lost. Miss 2+ days in a row, or use your Rest Day again before it recharges, and the streak resets to 1 — though if the broken streak was 3+ days, the System may offer a Penalty Quest to restore it. Every streak day adds +1% bonus XP to that day's quests, capped at +25%." },
     penalty: { title:"PENALTY QUEST", text:"When a streak of 3+ days breaks past your grace day, the System offers one same-day trial: clear all three listed exercises at 1.5× their gate-scaled daily goals before midnight. Succeed and your full streak is restored (plus today) — with its XP bonus applying immediately. Fail and the trial silently expires; your streak stays broken but nothing else is lost. The offer appears at most once per 14 days." },
-    gate: { title:"GATE RANK", text:"Scales your Daily Goals on the Job Board, like gate ranks in the show. Each exercise has a base goal (your E-Gate baseline — customizable via the ⚙ icon on the Freelance Quest panel); higher gates multiply it, up to roughly 9× at S-Gate. Goals are cumulative for the day — every set you log counts toward them, and the board tracks your progress live. Gate Rank defaults to your Hunter Rank but you can raise or lower it any time." },
+    gate: { title:"GATE RANK", text:"Scales your Daily Goals on the Job Board, like gate ranks in the show. Each exercise has a base goal (your E-Gate baseline — customizable via the ⚙ icon on the Freelance Quest panel); higher gates multiply it — D is 1.25×, C is 1.5×, up to 2.5× at S-Gate. Goals are cumulative for the day — every set you log counts toward them, and the board tracks your progress live. Gate Rank defaults to your Hunter Rank but you can raise or lower it any time." },
     boss: { title:"WEEKLY BOSS", text:"A boss spawns every Monday with HP set to 15% above your average weekly XP from the last 3 weeks (with a minimum floor based on your Gate Rank, locked at spawn). Every XP you earn Monday–Sunday deals that much damage — streak bonuses included. Deplete its HP before the week ends to slay it and claim a bounty worth 20% of its HP. If it survives, it escapes — no penalty, just a mark in your Boss Log. Slain bosses stay slain, even if you later remove logged days." },
   };
   function infoBtn(key){
@@ -1649,7 +1649,7 @@
         }).join("")}
       </div>`;
     }).join("");
-    return rows + `<div class="ex-mgr-note">Daily Goal is your E-Gate baseline — the Job Board scales it up with your Gate Rank (an S-Gate is roughly 9× an E-Gate). Leave blank to use the default shown. Removed exercises no longer appear in the dropdown or Job Board, but past logs are untouched.</div>`;
+    return rows + `<div class="ex-mgr-note">Daily Goal is your E-Gate baseline — the Job Board scales it up with your Gate Rank (an S-Gate is 2.5× an E-Gate). Leave blank to use the default shown. Removed exercises no longer appear in the dropdown or Job Board, but past logs are untouched.</div>`;
   }
 
   function setDailyGoal(id, value){
