@@ -1169,7 +1169,7 @@
     MIXED: { color:"#f6c453", names:["Dungeon Overlord","The Monarch's Shade","Gatekeeper"] },
   };
   const BOSS_CATEGORIES = ["STR","AGI","VIT","MIXED"];
-  const BOSS_HP_FLOORS = { E:400, D:300, C:500, B:750, A:1100, S:1500 };
+  const BOSS_HP_FLOORS = { E:400, D:500, C:650, B:850, A:1100, S:1500 };
   const BOSS_HP_MULTIPLIER = 1.15;
   const BOSS_BOUNTY_PCT = 0.20;
 
@@ -1216,9 +1216,12 @@
       .reduce((sum,l)=> sum + (l.totalXp||0), 0);
   }
   function avgRecentWeeklyXp(currentMonday){
-    let total = 0;
-    for(let k=1;k<=3;k++){ total += computeWeeklyDamage(addDays(currentMonday, -7*k)); }
-    return total / 3;
+    let total = 0, weeksWithData = 0;
+    for(let k=1;k<=3;k++){
+      const weekXp = computeWeeklyDamage(addDays(currentMonday, -7*k));
+      if(weekXp > 0){ total += weekXp; weeksWithData++; }
+    }
+    return weeksWithData > 0 ? (total / weeksWithData) : 0;
   }
   function spawnWeeklyBoss(weekKey){
     const seed = seedFromString(weekKey);
@@ -1542,6 +1545,72 @@
     showSystemWindow(baseXp, result.leveledUp, result.rankedUp, tierUps, bonusPct, bonusXp, usedGraceToday, newAchievements, bossInfo, clearedPenalty ? state.streak : null);
   }
 
+  // ---------- backdated logging ----------
+  // Logs a quest for a past date instead of today. Deliberately simpler than completeQuest:
+  // no streak bonus (computing "what your streak was on that historical date" is fuzzy and
+  // easy to get wrong), no grace/penalty interaction, no goal-clear counters (those track a
+  // live moment, not a retroactive one). After merging the entries, the full state (level,
+  // XP, streak, lastLogDate) is rebuilt from the complete log history via recomputeFromLogs —
+  // the same trusted mechanism history-deletion already uses — so nothing goes stale or
+  // double-counted, and a backdated day slots into streak continuity exactly like it would
+  // have if you'd logged it live.
+  function completeBackdatedQuest(targetDate, entriesBuilder){
+    if(!targetDate || entriesBuilder.length === 0) return null;
+    const today = todayStr();
+    if(targetDate >= today) return null; // this path is for the past only; today uses the normal flow
+
+    const oldPoints = categoryPoints();
+    const oldTiers = {STR:tierInfo(oldPoints.STR).tier, AGI:tierInfo(oldPoints.AGI).tier, VIT:tierInfo(oldPoints.VIT).tier};
+
+    let baseXp = 0;
+    const entries = entriesBuilder.map(b=>{
+      const sum = b.sets.reduce((a,c)=>a+c,0);
+      const xp = b.type === "time" ? Math.round(sum*0.4) : b.type === "minutes" ? Math.round(sum*3) : Math.round(sum);
+      baseXp += xp;
+      return {id:b.id, name:b.name, category:b.category, type:b.type, sets:b.sets.slice(), xp};
+    });
+
+    let log = state.logs.find(l=>l.date===targetDate);
+    if(!log){ log = {date:targetDate, entries:[], totalXp:0}; state.logs.push(log); }
+    entries.forEach(e=>{
+      const existing = log.entries.find(x=>x.id===e.id);
+      if(existing){ existing.sets = existing.sets.concat(e.sets); existing.xp += e.xp; }
+      else{ log.entries.push(e); }
+    });
+    log.totalXp += baseXp;
+
+    // Weekly boss damage still applies if the backdated date falls in the currently active
+    // boss's week — computeWeeklyDamage is date-range based, not "today"-based, so this is safe.
+    ensureWeeklyBoss();
+    const boss = state.weeklyBoss;
+    const bossWasAlive = boss && !boss.defeatedAt;
+    const bounty = processBossSlay();
+    const bossInfo = boss ? {
+      active: bossWasAlive,
+      slainNow: bounty > 0,
+      name: boss.name,
+      damage: baseXp,
+      remaining: Math.max(0, boss.hp - computeWeeklyDamage(boss.weekKey)),
+      bounty: bounty,
+    } : null;
+
+    const levelBefore = state.level;
+    const rankBefore = rankFor(state.level);
+    recomputeFromLogs(); // rebuilds level/xp/streak/lastLogDate/grace from the full log history
+    if(bounty > 0){ addXp(bounty); } // applied after recompute, since recompute derives XP purely from log totals
+    const leveledUp = state.level > levelBefore;
+    const rankAfter = rankFor(state.level);
+    const rankedUp = rankAfter !== rankBefore ? rankAfter : null;
+    const newPoints = categoryPoints();
+    const tierUps = ["STR","AGI","VIT"].filter(cat=> tierInfo(newPoints[cat]).tier > oldTiers[cat])
+      .map(cat=> ({cat, label: tierInfo(newPoints[cat]).label}));
+    const newAchievements = checkAchievements();
+    saveState();
+    render();
+    if(leveledUp){ triggerLevelUpFlash(); }
+    return { targetDate, baseXp, bounty, tierUps, newAchievements, bossInfo, leveledUp, rankedUp, newLevel: state.level };
+  }
+
   // ---------- render ----------
   const app = document.getElementById("app");
 
@@ -1641,7 +1710,10 @@
 
         <div class="builder-pills" id="builderPills">${renderBuilderPills()}</div>
 
-        <button class="btn primary" id="completeQuestBtn" ${builder.length===0 ? "disabled" : ""}>Complete Quest</button>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <button class="btn primary" id="completeQuestBtn" ${builder.length===0 ? "disabled" : ""}>Complete Quest</button>
+          <button class="btn ghost" id="openBackdateBtn">📅 Log a Past Day</button>
+        </div>
       </div>
 
       <div class="stack">
@@ -2953,9 +3025,146 @@
     overlay.addEventListener("click", (e)=>{ if(e.target===overlay) close(); });
   }
 
+  function showBackdateResultWindow(result){
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `
+      <div class="sys-window">
+        <div class="tag">◆ SYSTEM NOTICE ◆</div>
+        <h3>BACKDATED ENTRY LOGGED</h3>
+        <div class="line">Recorded for <b>${fmtDate(result.targetDate)}</b></div>
+        <div class="line">XP gained: <b>+${result.baseXp}</b> <span style="color:var(--text-dim2); font-size:11px;">(no streak bonus — bonus only applies to same-day logging)</span></div>
+        ${result.bossInfo && result.bossInfo.active && !result.bossInfo.slainNow ? `<div class="line boss-damage-line">⚔ Boss damage: −${result.bossInfo.damage} HP (${result.bossInfo.remaining} remaining)</div>` : ""}
+        ${result.bossInfo && result.bossInfo.slainNow ? `<div class="rankup boss-slain-banner">⚔ BOSS SLAIN — ${result.bossInfo.name}</div><div class="line">Bounty: <b style="color:var(--gold);">+${result.bossInfo.bounty} XP</b></div>` : ""}
+        ${result.leveledUp ? `<div class="line">You have reached <b>Level ${result.newLevel}</b>.</div>` : ""}
+        ${result.rankedUp ? `<div class="rankup">RANK UP → ${result.rankedUp}-RANK HUNTER</div>` : ""}
+        ${result.tierUps.map(t=>`<div class="rankup" style="color:var(--blue);text-shadow:0 0 12px rgba(79,195,247,0.5);">${t.cat} TIER UP → ${t.label}</div>`).join("")}
+        ${result.newAchievements.map(a=>`<div class="rankup achievement-unlock">🏆 ACHIEVEMENT — ${a.name}<span class="achievement-title-line">Title unlocked: "${a.title}"</span></div>`).join("")}
+        <div class="line" style="color:var(--text-dim2); font-size:11px; margin-top:10px;">Your streak has been recalculated to account for this entry.</div>
+        <button class="btn primary" id="closeBackdateResult">Continue</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(()=>overlay.classList.add("show"));
+    function close(){
+      overlay.classList.remove("show");
+      setTimeout(()=>overlay.remove(), 250);
+    }
+    overlay.querySelector("#closeBackdateResult").addEventListener("click", close);
+    overlay.addEventListener("click", (e)=>{ if(e.target===overlay) close(); });
+  }
+
+  function showBackdateOverlay(){
+    let entries = []; // {id, name, category, type, sets:[]}
+    const dateOptions = [];
+    for(let i=1;i<=14;i++){
+      const d = addDays(todayStr(), -i);
+      const label = i===1 ? `Yesterday (${fmtDate(d)})` : `${i} days ago (${fmtDate(d)})`;
+      dateOptions.push({date:d, label});
+    }
+
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `
+      <div class="sys-window card-window" style="max-width:520px;">
+        <div class="tag">◆ SETTINGS ◆</div>
+        <h3>LOG A PAST DAY</h3>
+        <div style="text-align:left;">
+          <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin-bottom:8px;">WHICH DAY</label>
+          <select id="backdateDateSelect" class="settings-input" style="margin-bottom:16px;">
+            ${dateOptions.map(o=>`<option value="${o.date}">${o.label}</option>`).join("")}
+          </select>
+
+          <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin-bottom:8px;">ADD EXERCISES</label>
+          <div class="builder-row" style="margin-bottom:14px;">
+            <select id="backdateExerciseSelect">${renderExerciseOptions()}</select>
+            <input type="number" min="0" class="num-input" id="backdateValueInput" placeholder="reps" />
+            <button class="btn small" id="backdateAddSetBtn">Add Set</button>
+          </div>
+          <div class="builder-pills" id="backdatePills"><div class="empty-note">No exercises added yet.</div></div>
+        </div>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:16px;">
+          <button class="btn ghost" id="closeBackdateOverlay">Cancel</button>
+          <button class="btn primary" id="submitBackdateBtn" disabled>Log Entry</button>
+        </div>
+        <div class="card-hint">This won't get a streak bonus (that only applies to same-day logging), but it will fill in your streak and history for that day, and count toward Level, XP, and the current Weekly Boss if that date falls in this week.</div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(()=>overlay.classList.add("show"));
+
+    const exerciseSelect = overlay.querySelector("#backdateExerciseSelect");
+    const valueInput = overlay.querySelector("#backdateValueInput");
+    const pillsEl = overlay.querySelector("#backdatePills");
+    const submitBtn = overlay.querySelector("#submitBackdateBtn");
+
+    function placeholderFor(id){
+      const ex = allExercises().find(e=>e.id===id);
+      return ex && ex.type === "time" ? "seconds" : ex && ex.type === "minutes" ? "minutes" : "reps";
+    }
+    exerciseSelect.addEventListener("change", ()=>{ valueInput.placeholder = placeholderFor(exerciseSelect.value); });
+    valueInput.placeholder = placeholderFor(exerciseSelect.value);
+
+    function refreshPills(){
+      if(entries.length === 0){
+        pillsEl.innerHTML = `<div class="empty-note">No exercises added yet.</div>`;
+      } else {
+        pillsEl.innerHTML = entries.map((b,i)=>`
+          <div class="pill-row">
+            <span class="name">${escapeHtml(b.name)}</span>
+            <span class="cat">${b.category}</span>
+            <span class="sets">${b.sets.join(" · ")}${b.type==="time" ? "s" : b.type==="minutes" ? "m" : ""}</span>
+            <button class="remove" data-backdate-remove="${i}" title="Remove">✕</button>
+          </div>
+        `).join("");
+        pillsEl.querySelectorAll("[data-backdate-remove]").forEach(btn=>{
+          btn.addEventListener("click", ()=>{
+            entries.splice(parseInt(btn.dataset.backdateRemove,10),1);
+            refreshPills();
+          });
+        });
+      }
+      submitBtn.disabled = entries.length === 0;
+    }
+
+    overlay.querySelector("#backdateAddSetBtn").addEventListener("click", ()=>{
+      const id = exerciseSelect.value;
+      const ex = allExercises().find(e=>e.id===id);
+      const val = parseInt(valueInput.value, 10);
+      if(!ex || !val || val<=0){ valueInput.focus(); return; }
+      let entry = entries.find(b=>b.id===id);
+      if(!entry){ entry = {id:ex.id, name:ex.name, category:ex.category, type:ex.type, sets:[]}; entries.push(entry); }
+      entry.sets.push(val);
+      valueInput.value = "";
+      refreshPills();
+      valueInput.focus();
+    });
+    valueInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); overlay.querySelector("#backdateAddSetBtn").click(); } });
+
+    function close(){
+      overlay.classList.remove("show");
+      setTimeout(()=>overlay.remove(), 250);
+    }
+    overlay.querySelector("#closeBackdateOverlay").addEventListener("click", close);
+    overlay.addEventListener("click", (e)=>{ if(e.target===overlay) close(); });
+
+    submitBtn.addEventListener("click", ()=>{
+      const targetDate = overlay.querySelector("#backdateDateSelect").value;
+      const dateLabel = dateOptions.find(o=>o.date===targetDate).label;
+      showConfirmOverlay(`Log ${entries.length} exercise${entries.length===1?"":"s"} for ${dateLabel}? This can't be easily undone (though you can remove it later from Quest History).`, ()=>{
+        const result = completeBackdatedQuest(targetDate, entries);
+        close();
+        if(result){ showBackdateResultWindow(result); }
+      });
+    });
+  }
+
   function bindEvents(){
     const openCardBtn = document.getElementById("openCardBtn");
     if(openCardBtn){ openCardBtn.addEventListener("click", showGuildCardOverlay); }
+
+    const openBackdateBtn = document.getElementById("openBackdateBtn");
+    if(openBackdateBtn){ openBackdateBtn.addEventListener("click", showBackdateOverlay); }
 
     document.querySelectorAll("[data-equip-title]").forEach(btn=>{
       btn.addEventListener("click", ()=>{ toggleEquipTitle(btn.dataset.equipTitle); });
