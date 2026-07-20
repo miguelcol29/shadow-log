@@ -555,7 +555,9 @@
     font-weight: 700;
     font-style: normal;
   }
-  .num-input{ width: 90px; }
+  .num-input{ width: 90px; -moz-appearance: textfield; }
+  .num-input::-webkit-outer-spin-button,
+  .num-input::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
   .num-input::placeholder, input::placeholder{ color: var(--text-dim); opacity: 1; }
   .btn{
     background: rgba(79,195,247,0.08);
@@ -585,10 +587,10 @@
     padding: 8px 12px;
     font-size: 13px;
   }
-  .pill-row .name{ font-weight:700; flex:1; }
-  .pill-row .cat{ font-size:11px; letter-spacing:1px; color: var(--text-mid); border:1px solid var(--border); padding:2px 6px; }
-  .pill-row .sets{ font-family:'JetBrains Mono', monospace; color: var(--blue); font-size:12px; }
-  .pill-row .remove{ background:none; border:none; color: var(--red); font-size:16px; line-height:1; padding:0 4px; }
+  .pill-row .name{ font-weight:700; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pill-row .cat{ font-size:11px; letter-spacing:1px; color: var(--text-mid); border:1px solid var(--border); padding:2px 6px; flex-shrink:0; }
+  .pill-row .sets{ font-family:'JetBrains Mono', monospace; color: var(--blue); font-size:12px; flex-shrink:0; }
+  .pill-row .remove{ background:none; border:none; color: var(--red); font-size:16px; line-height:1; padding:0 4px; cursor:pointer; flex-shrink:0; align-self:center; margin-top:0 !important; }
 
   .toggle-custom{ font-size:12px; color: var(--text-dim2); text-decoration: underline; background:none; border:none; padding:0; margin-bottom:12px; letter-spacing:0.5px; }
   .boss-log-toggle{
@@ -622,10 +624,54 @@
   .exercise-manager{ display:none; flex-direction:column; gap:14px; margin-bottom:14px; padding:12px; background: rgba(255,255,255,0.02); border:1px dashed var(--border); }
   .exercise-manager.open{ display:flex; }
   .ex-mgr-cat{ font-size:11px; letter-spacing:1.5px; color: var(--text-dim2); margin-bottom:6px; }
-  .ex-mgr-row{ display:flex; align-items:center; justify-content:space-between; padding:5px 0; font-size:13px; }
-  .ex-mgr-row.is-hidden span{ color: var(--text-dim2); text-decoration: line-through; }
+  .ex-mgr-row{ display:flex; align-items:center; padding:5px 0; font-size:13px; gap:8px; flex-wrap:wrap; }
+  .ex-mgr-row.is-hidden .ex-mgr-name{ color: var(--text-dim2); text-decoration: line-through; }
   .ex-mgr-row .btn{ margin-top:0; }
   .ex-mgr-note{ font-size:12px; color: var(--text-dim2); line-height:1.4; }
+  .ex-mgr-name{ flex:1; min-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ex-mgr-actions{ display:flex; align-items:center; gap:6px; flex-shrink:0; flex-wrap:wrap; }
+  .ex-mgr-edit-btn{ padding:4px 8px !important; font-size:13px !important; }
+  .ex-mgr-goal-input{
+    width:58px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 6px;
+    font-size: 12px;
+    font-family:'JetBrains Mono', monospace;
+  }
+  .ex-mgr-unit{ font-size:11px; color: var(--text-dim2); }
+  .ex-mgr-weight-toggle{ display:flex; align-items:center; gap:3px; cursor:pointer; flex-shrink:0; }
+  .ex-mgr-weight-toggle input{ cursor:pointer; }
+  .ex-mgr-weight-label{ font-size:13px; color: var(--text-dim2); }
+  .weight-input{ width:70px; }
+  .weight-input.hidden{ display:none; }
+
+  /* ---------- Workout templates ---------- */
+  .template-picker{ margin-bottom:14px; }
+  .template-picker-label{ font-size:10px; letter-spacing:2px; color: var(--text-dim2); margin-bottom:8px; }
+  .template-chips{ display:flex; flex-wrap:wrap; gap:8px; }
+  .template-chip{
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    display:flex; align-items:center; gap:10px;
+    flex-wrap:wrap;
+  }
+  .template-chip-name{ font-weight:700; font-size:13px; color:#fff; }
+  .template-chip-meta{ font-family:'JetBrains Mono', monospace; font-size:10px; color: var(--text-dim2); }
+  .template-chip-actions{ display:flex; gap:4px; }
+  .template-chip-actions .btn{ padding:4px 10px !important; font-size:12px !important; margin-top:0; }
+  .template-mgr-item{
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+  .template-mgr-head{ display:flex; align-items:center; gap:10px; margin-bottom:6px; flex-wrap:wrap; }
+  .template-mgr-name{ font-family:'Orbitron', sans-serif; font-size:13px; color:#fff; flex:1; }
+  .template-mgr-head .btn{ margin-top:0; }
+  .template-mgr-exercises{ padding-left:4px; }
 
   /* ---------- Job board ---------- */
   .board-head{ display:flex; justify-content:space-between; align-items:flex-end; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
@@ -672,19 +718,6 @@
   .goal-progress-track{ flex:1; height:6px; background: rgba(0,0,0,0.4); border-radius:3px; overflow:hidden; }
   .goal-progress-fill{ height:100%; border-radius:3px; transition: width .4s ease; }
   .goal-progress-text{ font-family:'JetBrains Mono', monospace; font-size:11px; color: var(--text-mid); flex-shrink:0; }
-  .ex-mgr-name{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .ex-mgr-goal{ display:flex; align-items:center; gap:5px; flex-shrink:0; }
-  .ex-mgr-goal-input{
-    width:58px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 5px 6px;
-    font-size: 12px;
-    font-family:'JetBrains Mono', monospace;
-  }
-  .ex-mgr-unit{ font-size:11px; color: var(--text-dim2); }
-  .ex-mgr-row{ gap:10px; }
   .roster-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 0; font-size:13px; }
   .roster-row select{ min-width: 150px; flex:none; }
 
@@ -912,6 +945,7 @@
     penalty: { title:"PENALTY QUEST", text:"When a streak of 3+ days breaks past your grace day, the System offers one same-day trial: clear all three listed exercises at 1.5× their gate-scaled daily goals before midnight. Succeed and your full streak is restored (plus today) — with its XP bonus applying immediately. Fail and the trial silently expires; your streak stays broken but nothing else is lost. The offer appears at most once per 14 days." },
     gate: { title:"GATE RANK", text:"Scales your Daily Goals on the Job Board, like gate ranks in the show. Each exercise has a base goal (your E-Gate baseline — customizable via the ⚙ icon on the Freelance Quest panel); higher gates multiply it — D is 1.25×, C is 1.5×, up to 2.5× at S-Gate. Goals are cumulative for the day — every set you log counts toward them, and the board tracks your progress live. Gate Rank defaults to your Hunter Rank but you can raise or lower it any time." },
     boss: { title:"WEEKLY BOSS", text:"A boss spawns every Monday with HP set to 15% above your average weekly XP from the last 3 weeks (with a minimum floor based on your Gate Rank, locked at spawn). Every XP you earn Monday–Sunday deals that much damage — streak bonuses included. Deplete its HP before the week ends to slay it and claim a bounty worth 20% of its HP. If it survives, it escapes — no penalty, just a mark in your Boss Log. Slain bosses stay slain, even if you later remove logged days." },
+    freelance: { title:"FREELANCE QUEST", text:"Your main workout logging area. Pick an exercise from the dropdown, enter reps/seconds/minutes (leave blank to use your Daily Goal), and hit Add Set — repeat for each set. The builder shows everything queued up; hit Complete Quest to log it all.\n\n⚙ Manage Exercises (gear icon): add custom exercises, rename existing ones, set Daily Goals per exercise, enable ⚖ weight tracking, or hide exercises you don't use.\n\nTemplates: select a saved template from the dropdown and either ⚡ Log it instantly (with confirmation) or ↗ Load it into the builder to tweak before completing. Create and manage templates via 📋 Manage Templates.\n\n💾 Save as Template (appears after logging): captures today's quest as a reusable template.\n\n📅 Log a Past Day: backdate a workout for any day in the last 14 days — XP is base-only (no streak bonus), but the entry fills in your streak and counts toward the Weekly Boss." },
   };
   function infoBtn(key){
     return `<button class="info-btn" type="button" data-info-key="${key}" aria-label="How ${key.toUpperCase()} works">i</button>`;
@@ -965,10 +999,15 @@
 
   // ---------- state helpers ----------
   function defaultState(){
-    return { level:1, xp:0, streak:0, lastLogDate:null, logs:[], customExercises:[], roster: Object.assign({}, DEFAULT_ROSTER), board: null, grace: { lastUsedDate: null }, gateRank: null, hunterName:"", hunterId:null, hunterAvatar:null, hiddenExerciseIds:[], dailyGoals:{}, achievements:{}, equippedTitle:null, counters:{ goalsCleared:0, sGateGoalClears:0, bossesSlain:0, penaltiesCleared:0 }, weeklyBoss:null, bossHistory:[], penalty:{ lastOfferedDate:null, active:null } };
+    return { level:1, xp:0, streak:0, lastLogDate:null, logs:[], customExercises:[], roster: Object.assign({}, DEFAULT_ROSTER), board: null, grace: { lastUsedDate: null }, gateRank: null, hunterName:"", hunterId:null, hunterAvatar:null, hiddenExerciseIds:[], dailyGoals:{}, achievements:{}, equippedTitle:null, counters:{ goalsCleared:0, sGateGoalClears:0, bossesSlain:0, penaltiesCleared:0, templatesSaved:0, quickLogs:0 }, weeklyBoss:null, bossHistory:[], penalty:{ lastOfferedDate:null, active:null }, templates:[] };
   }
   function allExercises(){
-    return DEFAULT_EXERCISES.concat(state.customExercises || []);
+    const overrides = state.exerciseOverrides || {};
+    const defaults = DEFAULT_EXERCISES.map(ex=>{
+      const ov = overrides[ex.id];
+      return ov ? Object.assign({}, ex, { name: ov.name || ex.name, category: ov.category || ex.category }) : ex;
+    });
+    return defaults.concat(state.customExercises || []);
   }
   // Exercises available for picking (dropdown, job board). Hidden ones are excluded here
   // but allExercises() still resolves them by id for history/chart lookups of past logs.
@@ -1115,6 +1154,8 @@
     { id:"boss_1",     name:"Dungeon Breaker", title:"Dungeon Breaker", desc:"Slay your first Weekly Boss.",         check:(c)=> c.bossesSlain >= 1 },
     { id:"boss_5",     name:"Raid Captain", title:"The Boss-Slayer",  desc:"Slay 5 Weekly Bosses.",                  check:(c)=> c.bossesSlain >= 5 },
     { id:"penalty_1",  name:"Redemption",   title:"The Redeemed",     desc:"Clear a Penalty Quest and restore a broken streak.", check:(c)=> c.penaltiesCleared >= 1 },
+    { id:"template_1", name:"Creature of Habit", title:"The Methodical", desc:"Save your first Workout Template.", check:(c)=> c.templatesSaved >= 1 },
+    { id:"quicklog_10", name:"Set It and Forget It", title:"The Efficient", desc:"Quick Log a template 10 times.", check:(c)=> c.quickLogs >= 10 },
   ];
 
   function achievementContext(){
@@ -1137,6 +1178,8 @@
       sGateGoalClears: counters.sGateGoalClears || 0,
       bossesSlain: counters.bossesSlain || 0,
       penaltiesCleared: counters.penaltiesCleared || 0,
+      templatesSaved: counters.templatesSaved || 0,
+      quickLogs: counters.quickLogs || 0,
     };
   }
 
@@ -1467,7 +1510,7 @@
       const sum = b.sets.reduce((a,c)=>a+c,0);
       const xp = b.type === "time" ? Math.round(sum*0.4) : b.type === "minutes" ? Math.round(sum*3) : Math.round(sum);
       baseXp += xp;
-      return {id:b.id, name:b.name, category:b.category, type:b.type, sets:b.sets.slice(), xp};
+      return {id:b.id, name:b.name, category:b.category, type:b.type, sets:b.sets.slice(), weights:(b.weights||[]).slice(), xp};
     });
 
     // Capture pre-merge totals so we can detect daily-goal crossings below
@@ -1478,7 +1521,11 @@
     if(!log){ log = {date:today, entries:[], totalXp:0}; state.logs.push(log); }
     entries.forEach(e=>{
       const existing = log.entries.find(x=>x.id===e.id);
-      if(existing){ existing.sets = existing.sets.concat(e.sets); existing.xp += e.xp; }
+      if(existing){
+        existing.sets = existing.sets.concat(e.sets);
+        existing.weights = (existing.weights||[]).concat(e.weights||[]);
+        existing.xp += e.xp;
+      }
       else{ log.entries.push(e); }
     });
 
@@ -1567,14 +1614,18 @@
       const sum = b.sets.reduce((a,c)=>a+c,0);
       const xp = b.type === "time" ? Math.round(sum*0.4) : b.type === "minutes" ? Math.round(sum*3) : Math.round(sum);
       baseXp += xp;
-      return {id:b.id, name:b.name, category:b.category, type:b.type, sets:b.sets.slice(), xp};
+      return {id:b.id, name:b.name, category:b.category, type:b.type, sets:b.sets.slice(), weights:(b.weights||[]).slice(), xp};
     });
 
     let log = state.logs.find(l=>l.date===targetDate);
     if(!log){ log = {date:targetDate, entries:[], totalXp:0}; state.logs.push(log); }
     entries.forEach(e=>{
       const existing = log.entries.find(x=>x.id===e.id);
-      if(existing){ existing.sets = existing.sets.concat(e.sets); existing.xp += e.xp; }
+      if(existing){
+        existing.sets = existing.sets.concat(e.sets);
+        existing.weights = (existing.weights||[]).concat(e.weights||[]);
+        existing.xp += e.xp;
+      }
       else{ log.entries.push(e); }
     });
     log.totalXp += baseXp;
@@ -1698,13 +1749,16 @@
       </div>
 
       <div class="panel" style="margin-top:18px;">
-        <div class="eyebrow panel-eyebrow-row"><span class="eyebrow-label"><span class="dot"></span>FREELANCE QUEST</span><button class="panel-gear-btn" id="openExerciseMgrBtn" type="button" aria-label="Manage exercises" title="Manage exercises">⚙</button></div>
+        <div class="eyebrow panel-eyebrow-row"><span class="eyebrow-label"><span class="dot"></span>FREELANCE QUEST${infoBtn("freelance")}</span><button class="panel-gear-btn" id="openExerciseMgrBtn" type="button" aria-label="Manage exercises" title="Manage exercises">⚙</button></div>
         <p style="font-size:13px;color:var(--text-dim2);margin:-6px 0 14px;">Accept a contract above, or log anything off-board here — a different exercise, a soccer match, disc golf, whatever today calls for.</p>
         ${!loggedToday ? `<div class="empty-note" style="margin-bottom:10px;">No quest logged today. The System is waiting.</div>` : `<div class="today-summary" style="margin-bottom:10px;">Today's quest: ${loggedToday.entries.map(e=>e.name).join(", ")} — ${loggedToday.totalXp} XP earned so far.</div>`}
+
+        ${renderTemplateList()}
 
         <div class="builder-row">
           <select id="exerciseSelect">${renderExerciseOptions()}</select>
           <input type="number" min="0" class="num-input" id="setValueInput" placeholder="${currentPlaceholder()}" />
+          <input type="number" min="0" step="0.5" class="num-input weight-input ${showWeightInput() ? "" : "hidden"}" id="setWeightInput" placeholder="lbs" title="Weight (optional)" />
           <button class="btn" id="addSetBtn">Add Set</button>
         </div>
 
@@ -1713,6 +1767,8 @@
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
           <button class="btn primary" id="completeQuestBtn" ${builder.length===0 ? "disabled" : ""}>Complete Quest</button>
           <button class="btn ghost" id="openBackdateBtn">📅 Log a Past Day</button>
+          ${loggedToday ? `<button class="btn ghost" id="saveAsTemplateBtn">💾 Save as Template</button>` : ""}
+                    <button class="btn ghost" id="manageTemplatesBtn">📋 Manage Templates</button>
         </div>
       </div>
 
@@ -1782,6 +1838,7 @@
 
   function renderExerciseManager(){
     const hidden = state.hiddenExerciseIds || [];
+    const weights = state.exerciseWeights || {};
     const groups = {STR:[], AGI:[], VIT:[]};
     allExercises().forEach(ex=>groups[ex.category].push(ex));
     const rows = Object.keys(groups).map(cat=>{
@@ -1793,18 +1850,24 @@
           const unit = ex.type==="time" ? "sec" : ex.type==="minutes" ? "min" : "reps";
           const customGoal = state.dailyGoals && state.dailyGoals[ex.id];
           const defaultGoal = (GATE_TARGETS[ex.type] || GATE_TARGETS.reps).E;
+          const hasWeight = !!weights[ex.id];
+          const isCustom = ex.id.startsWith("c_");
           return `<div class="ex-mgr-row ${isHidden?"is-hidden":""}">
             <span class="ex-mgr-name">${escapeHtml(ex.name)}</span>
-            <span class="ex-mgr-goal">
-              <input type="number" min="1" class="ex-mgr-goal-input" data-goal-exercise="${ex.id}" placeholder="${defaultGoal}" value="${customGoal || ""}" />
+            <span class="ex-mgr-actions">
+              <button class="btn small ghost ex-mgr-edit-btn" data-edit-exercise="${ex.id}" title="Edit exercise">✎</button>
+              <input type="number" min="1" class="ex-mgr-goal-input" data-goal-exercise="${ex.id}" placeholder="${defaultGoal}" value="${customGoal || ""}" title="Daily goal (${unit})" />
               <span class="ex-mgr-unit">${unit}/day</span>
+              <label class="ex-mgr-weight-toggle" title="Track weight for this exercise">
+                <input type="checkbox" data-weight-toggle="${ex.id}" ${hasWeight ? "checked" : ""} /> <span class="ex-mgr-weight-label">⚖</span>
+              </label>
+              <button class="btn small ${isHidden?"":"ghost"}" data-toggle-exercise="${ex.id}">${isHidden?"Restore":"Remove"}</button>
             </span>
-            <button class="btn small ${isHidden?"":"ghost"}" data-toggle-exercise="${ex.id}">${isHidden?"Restore":"Remove"}</button>
           </div>`;
         }).join("")}
       </div>`;
     }).join("");
-    return rows + `<div class="ex-mgr-note">Daily Goal is your E-Gate baseline — the Job Board scales it up with your Gate Rank (an S-Gate is 2.5× an E-Gate). Leave blank to use the default shown. Removed exercises no longer appear in the dropdown or Job Board, but past logs are untouched.</div>`;
+    return rows + `<div class="ex-mgr-note">✎ Edit = rename or change category. ⚖ Weight = track load (lbs/kg) when logging sets. Daily Goal is your E-Gate baseline — the Job Board scales it up with your Gate Rank. Leave blank to use the default. Removed exercises hide from the dropdown/Job Board but past logs are untouched.</div>`;
   }
 
   function setDailyGoal(id, value){
@@ -1813,6 +1876,76 @@
     if(!num || num <= 0){ delete state.dailyGoals[id]; }
     else{ state.dailyGoals[id] = num; }
     saveState();
+  }
+
+  function toggleExerciseWeight(id, enabled){
+    state.exerciseWeights = state.exerciseWeights || {};
+    if(enabled){ state.exerciseWeights[id] = true; }
+    else{ delete state.exerciseWeights[id]; }
+    saveState();
+  }
+
+  function showEditExerciseOverlay(id){
+    const ex = allExercises().find(e=>e.id===id);
+    if(!ex) return;
+    const isDefault = !id.startsWith("c_");
+    // For default exercises we store overrides in state.exerciseOverrides
+    const overrides = state.exerciseOverrides || {};
+    const currentName = (overrides[id] && overrides[id].name) || ex.name;
+    const currentCategory = (overrides[id] && overrides[id].category) || ex.category;
+
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `
+      <div class="sys-window" style="max-width:380px;">
+        <div class="tag">◆ EDIT EXERCISE ◆</div>
+        <h3>${escapeHtml(ex.name)}</h3>
+        <div style="text-align:left;">
+          <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin-bottom:6px;">NAME</label>
+          <input type="text" id="editExName" maxlength="40" value="${escapeHtml(currentName)}" class="settings-input" style="margin-bottom:14px;" />
+          <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin-bottom:6px;">CATEGORY</label>
+          <select id="editExCategory" class="settings-input" style="margin-bottom:14px;">
+            <option value="STR" ${currentCategory==="STR"?"selected":""}>STR</option>
+            <option value="AGI" ${currentCategory==="AGI"?"selected":""}>AGI</option>
+            <option value="VIT" ${currentCategory==="VIT"?"selected":""}>VIT</option>
+          </select>
+          <div style="font-size:11px; color:var(--text-dim2); line-height:1.4;">Changes apply going forward. Past log entries keep their original name and category for historical accuracy.</div>
+        </div>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:18px;">
+          <button class="btn ghost" id="cancelEditEx">Cancel</button>
+          <button class="btn primary" id="saveEditEx">Save</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(()=>overlay.classList.add("show"));
+
+    function close(){
+      overlay.classList.remove("show");
+      setTimeout(()=>overlay.remove(), 250);
+    }
+    overlay.querySelector("#cancelEditEx").addEventListener("click", close);
+    overlay.addEventListener("click", (e)=>{ if(e.target===overlay) close(); });
+
+    overlay.querySelector("#saveEditEx").addEventListener("click", ()=>{
+      const newName = overlay.querySelector("#editExName").value.trim();
+      const newCategory = overlay.querySelector("#editExCategory").value;
+      if(!newName) return;
+
+      if(isDefault){
+        state.exerciseOverrides = state.exerciseOverrides || {};
+        state.exerciseOverrides[id] = { name: newName, category: newCategory };
+      } else {
+        const custom = (state.customExercises||[]).find(e=>e.id===id);
+        if(custom){ custom.name = newName; custom.category = newCategory; }
+      }
+      saveState();
+      close();
+      render();
+    });
+
+    overlay.querySelector("#editExName").focus();
+    overlay.querySelector("#editExName").addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); overlay.querySelector("#saveEditEx").click(); } });
   }
 
   function toggleExerciseVisibility(id){
@@ -1829,19 +1962,442 @@
     const id = sel ? sel.value : allExercises()[0].id;
     const ex = allExercises().find(e=>e.id===id) || allExercises()[0];
     if(!ex) return "reps";
-    return ex.type === "time" ? "seconds" : ex.type === "minutes" ? "minutes" : "reps";
+    const unit = ex.type === "time" ? "sec" : ex.type === "minutes" ? "min" : "reps";
+    const goal = baseGoalFor(ex);
+    return goal ? `${goal} ${unit} (goal)` : unit;
+  }
+  function showWeightInput(){
+    const sel = document.getElementById("exerciseSelect");
+    const id = sel ? sel.value : allExercises()[0].id;
+    return !!(state.exerciseWeights && state.exerciseWeights[id]);
+  }
+  function updateWeightVisibility(){
+    const weightInput = document.getElementById("setWeightInput");
+    if(weightInput){
+      if(showWeightInput()){ weightInput.classList.remove("hidden"); }
+      else{ weightInput.classList.add("hidden"); weightInput.value = ""; }
+    }
   }
 
   function renderBuilderPills(){
     if(builder.length===0) return `<div class="empty-note">No exercises added to today's quest yet.</div>`;
-    return builder.map((b,i)=>`
+    return builder.map((b,i)=>{
+      const unitSuffix = b.type==="time" ? "s" : b.type==="minutes" ? "m" : "";
+      const setsDisplay = b.sets.map((s,j)=>{
+        const w = b.weights && b.weights[j];
+        return w ? `${s}${unitSuffix}@${w}` : `${s}${unitSuffix}`;
+      }).join(" · ");
+      return `
       <div class="pill-row">
         <span class="name">${b.name}</span>
         <span class="cat">${b.category}</span>
-        <span class="sets">${b.sets.join(" · ")}${b.type==="time" ? "s" : b.type==="minutes" ? "m" : ""}</span>
+        <span class="sets">${setsDisplay}</span>
         <button class="remove" data-idx="${i}" title="Remove">✕</button>
       </div>
-    `).join("");
+    `;
+    }).join("");
+  }
+
+  // ---------- workout templates ----------
+  function getTemplates(){ return state.templates || []; }
+
+  function saveTemplate(name, exercises){
+    state.templates = state.templates || [];
+    const id = "wt_" + name.toLowerCase().replace(/[^a-z0-9]+/g,"-") + "_" + Date.now().toString(36);
+    const template = { id, name, exercises, createdAt: todayStr(), timesLogged: 0 };
+    state.templates.push(template);
+    state.counters = state.counters || {};
+    state.counters.templatesSaved = (state.counters.templatesSaved||0) + 1;
+    checkAchievements();
+    saveState();
+    return template;
+  }
+
+  function updateTemplate(id, name, exercises){
+    const t = (state.templates||[]).find(t=>t.id===id);
+    if(!t) return;
+    t.name = name;
+    t.exercises = exercises;
+    saveState();
+  }
+
+  function deleteTemplate(id){
+    state.templates = (state.templates||[]).filter(t=>t.id!==id);
+    saveState();
+  }
+
+  function saveQuestAsTemplate(name){
+    // Capture whatever was just logged today (from the most recent log entry)
+    const todayLog = (state.logs||[]).find(l=>l.date===todayStr());
+    if(!todayLog || !todayLog.entries.length) return null;
+    const exercises = todayLog.entries.map(e=>({
+      id: e.id,
+      sets: e.sets.slice(),
+      weights: (e.weights||[]).slice(),
+    }));
+    return saveTemplate(name, exercises);
+  }
+
+  function loadTemplateIntoBuilder(templateId){
+    const t = (state.templates||[]).find(t=>t.id===templateId);
+    if(!t) return;
+    t.exercises.forEach(te=>{
+      const ex = allExercises().find(e=>e.id===te.id);
+      if(!ex) return; // skip hidden/deleted exercises
+      if((state.hiddenExerciseIds||[]).indexOf(te.id)!==-1) return;
+      let entry = builder.find(b=>b.id===te.id);
+      if(!entry){
+        entry = {id:ex.id, name:ex.name, category:ex.category, type:ex.type, sets:[], weights:[]};
+        builder.push(entry);
+      }
+      // Exercises with saved sets get pre-filled; blank ones are skipped in load mode too
+      // (they're just included in the template as placeholders for editing)
+      if(te.sets && te.sets.length > 0){
+        entry.sets = entry.sets.concat(te.sets);
+        entry.weights = (entry.weights||[]).concat(te.weights||[]);
+      }
+    });
+    render();
+  }
+
+  function quickLogTemplate(templateId){
+    const t = (state.templates||[]).find(t=>t.id===templateId);
+    if(!t) return;
+    // Build entries from only the exercises that have saved sets (skip blanks)
+    const validEntries = [];
+    t.exercises.forEach(te=>{
+      if(!te.sets || te.sets.length === 0) return;
+      const ex = allExercises().find(e=>e.id===te.id);
+      if(!ex) return;
+      if((state.hiddenExerciseIds||[]).indexOf(te.id)!==-1) return;
+      validEntries.push({id:ex.id, name:ex.name, category:ex.category, type:ex.type, sets:te.sets.slice(), weights:(te.weights||[]).slice()});
+    });
+    if(validEntries.length === 0) return;
+
+    // Show confirmation with full exercise/set detail
+    const detailLines = validEntries.map(e=>{
+      const unitSuffix = e.type==="time"?"s":e.type==="minutes"?"m":"";
+      const setsStr = e.sets.map((s,j)=>{
+        const w = e.weights && e.weights[j];
+        return w ? `${s}${unitSuffix}@${w}` : `${s}${unitSuffix}`;
+      }).join(", ");
+      return `<b>${escapeHtml(e.name)}</b>: ${setsStr}`;
+    }).join("<br>");
+    const totalSets = validEntries.reduce((sum,e)=>sum+e.sets.length, 0);
+
+    showConfirmOverlay(
+      `<div style="text-align:left; margin-bottom:10px;"><b>Quick Log "${escapeHtml(t.name)}"</b> — ${validEntries.length} exercise${validEntries.length===1?"":"s"}, ${totalSets} set${totalSets===1?"":"s"}:</div><div style="text-align:left; font-size:12px; line-height:1.6; max-height:200px; overflow-y:auto;">${detailLines}</div>`,
+      ()=>{
+        // Temporarily set builder to the template's entries and fire completeQuest
+        builder = validEntries;
+        t.timesLogged = (t.timesLogged||0) + 1;
+        state.counters = state.counters || {};
+        state.counters.quickLogs = (state.counters.quickLogs||0) + 1;
+        completeQuest();
+      }
+    );
+  }
+
+  function renderTemplateList(){
+    const templates = getTemplates();
+    if(templates.length === 0) return "";
+    return `
+      <div class="template-picker">
+        <div class="builder-row">
+          <select id="templateSelect">
+            ${templates.map(t=>{
+              const exCount = t.exercises.filter(e=> e.sets && e.sets.length > 0 && (state.hiddenExerciseIds||[]).indexOf(e.id)===-1).length;
+              return `<option value="${t.id}">${escapeHtml(t.name)} (${exCount} exercises)</option>`;
+            }).join("")}
+          </select>
+          <button class="btn small primary" id="quicklogSelectedTemplate" title="Quick Log — log everything instantly">⚡ Log</button>
+          <button class="btn small ghost" id="loadSelectedTemplate" title="Load into builder to review and edit before logging">↗ Load</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function showSaveAsTemplateOverlay(){
+    const todayLog = (state.logs||[]).find(l=>l.date===todayStr());
+    if(!todayLog || !todayLog.entries.length) return;
+
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    const exerciseList = todayLog.entries.map(e=>{
+      const unitSuffix = e.type==="time"?"s":e.type==="minutes"?"m":"";
+      const setsStr = e.sets.map((s,j)=>{
+        const w = e.weights && e.weights[j];
+        return w ? `${s}${unitSuffix}@${w}` : `${s}${unitSuffix}`;
+      }).join(", ");
+      return `<div style="font-size:12px; color:var(--text-mid); margin-bottom:4px;"><b>${escapeHtml(e.name)}</b>: ${setsStr}</div>`;
+    }).join("");
+
+    overlay.innerHTML = `
+      <div class="sys-window" style="max-width:440px;">
+        <div class="tag">◆ SAVE TEMPLATE ◆</div>
+        <h3>SAVE TODAY'S QUEST</h3>
+        <div style="text-align:left;">
+          <div style="margin-bottom:14px; max-height:180px; overflow-y:auto;">${exerciseList}</div>
+          <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin-bottom:6px;">TEMPLATE NAME</label>
+          <input type="text" id="templateNameInput" maxlength="30" placeholder="e.g. Push Day, Morning Circuit" class="settings-input" />
+        </div>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:18px;">
+          <button class="btn ghost" id="cancelSaveTemplate">Cancel</button>
+          <button class="btn primary" id="confirmSaveTemplate">Save Template</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(()=>overlay.classList.add("show"));
+
+    const nameInput = overlay.querySelector("#templateNameInput");
+    nameInput.focus();
+
+    function close(){
+      overlay.classList.remove("show");
+      setTimeout(()=>overlay.remove(), 250);
+    }
+    overlay.querySelector("#cancelSaveTemplate").addEventListener("click", close);
+    overlay.addEventListener("click", (e)=>{ if(e.target===overlay) close(); });
+    overlay.querySelector("#confirmSaveTemplate").addEventListener("click", ()=>{
+      const name = nameInput.value.trim();
+      if(!name){ nameInput.focus(); return; }
+      saveQuestAsTemplate(name);
+      close();
+      render();
+    });
+    nameInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); overlay.querySelector("#confirmSaveTemplate").click(); } });
+  }
+
+  function showManageTemplatesOverlay(){
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+
+    function renderList(){
+      const templates = getTemplates();
+      if(templates.length === 0) return `<div class="empty-note">No templates yet. Create one below or complete a quest and use "💾 Save as Template" to capture it.</div>`;
+      return templates.map(t=>{
+        const exercises = t.exercises.map(te=>{
+          const ex = allExercises().find(e=>e.id===te.id);
+          const name = ex ? ex.name : te.id;
+          const unitSuffix = ex ? (ex.type==="time"?"s":ex.type==="minutes"?"m":"") : "";
+          const setsStr = (te.sets||[]).length > 0
+            ? te.sets.map((s,j)=>{ const w = te.weights && te.weights[j]; return w ? `${s}${unitSuffix}@${w}` : `${s}${unitSuffix}`; }).join(", ")
+            : "(blank — manual entry)";
+          return `<div style="font-size:11px; color:var(--text-mid); padding:2px 0;">${escapeHtml(name)}: ${setsStr}</div>`;
+        }).join("");
+        return `
+          <div class="template-mgr-item">
+            <div class="template-mgr-head">
+              <span class="template-mgr-name">${escapeHtml(t.name)}</span>
+              <span style="font-size:11px; color:var(--text-dim2);">Logged ${t.timesLogged||0}×</span>
+              <button class="btn small ghost" data-edit-template="${t.id}">Edit</button>
+              <button class="btn small ghost" data-delete-template="${t.id}">Delete</button>
+            </div>
+            <div class="template-mgr-exercises">${exercises}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    overlay.innerHTML = `
+      <div class="sys-window card-window" style="max-width:520px;">
+        <div class="tag">◆ SETTINGS ◆</div>
+        <h3>MANAGE TEMPLATES</h3>
+        <div style="text-align:left; margin-bottom:16px;">
+          <button class="btn primary" id="createNewTemplateBtn" style="margin-top:0;">+ Create New Template</button>
+        </div>
+        <div id="templateMgrList" style="text-align:left; max-height:300px; overflow-y:auto;">${renderList()}</div>
+        <div style="display:flex; justify-content:center; margin-top:18px;">
+          <button class="btn ghost" id="closeTemplateMgr">Done</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(()=>overlay.classList.add("show"));
+
+    overlay.querySelector("#createNewTemplateBtn").addEventListener("click", ()=>{
+      close();
+      showEditTemplateOverlay(null); // null = create new
+    });
+
+    function bindButtons(){
+      overlay.querySelectorAll("[data-delete-template]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          showConfirmOverlay(`Delete template "${escapeHtml(getTemplates().find(t=>t.id===btn.dataset.deleteTemplate)?.name||"")}"? This can't be undone.`, ()=>{
+            deleteTemplate(btn.dataset.deleteTemplate);
+            overlay.querySelector("#templateMgrList").innerHTML = renderList();
+            bindButtons();
+            render();
+          });
+        });
+      });
+      overlay.querySelectorAll("[data-edit-template]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          close();
+          showEditTemplateOverlay(btn.dataset.editTemplate);
+        });
+      });
+    }
+    bindButtons();
+
+    function close(){
+      overlay.classList.remove("show");
+      setTimeout(()=>overlay.remove(), 250);
+    }
+    overlay.querySelector("#closeTemplateMgr").addEventListener("click", close);
+    overlay.addEventListener("click", (e)=>{ if(e.target===overlay) close(); });
+  }
+
+  function showEditTemplateOverlay(templateId){
+    const isCreate = !templateId;
+    const t = isCreate ? null : (state.templates||[]).find(t=>t.id===templateId);
+    if(!isCreate && !t) return;
+
+    let editExercises = isCreate ? [] : t.exercises.map(te=>({
+      id: te.id,
+      sets: (te.sets||[]).slice(),
+      weights: (te.weights||[]).slice(),
+    }));
+    let editName = isCreate ? "" : t.name;
+
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+
+    function renderEditPills(){
+      if(editExercises.length === 0) return `<div class="empty-note">${isCreate ? "Add exercises below to build your template." : "No exercises in this template."}</div>`;
+      return editExercises.map((te, ti)=>{
+        const ex = allExercises().find(e=>e.id===te.id);
+        const name = ex ? ex.name : te.id;
+        const unitSuffix = ex ? (ex.type==="time"?"s":ex.type==="minutes"?"m":"") : "";
+        const setsDisplay = te.sets.map((s,j)=>{
+          const w = te.weights && te.weights[j];
+          return w ? `${s}${unitSuffix}@${w}` : `${s}${unitSuffix}`;
+        }).join(" · ");
+        return `
+          <div class="pill-row">
+            <span class="name">${escapeHtml(name)}</span>
+            <span class="cat">${ex ? ex.category : "?"}</span>
+            <span class="sets">${setsDisplay || "(no sets)"}</span>
+            <button class="remove" data-remove-tedit="${ti}" title="Remove exercise">✕</button>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function refreshOverlay(){
+      const heading = isCreate ? "CREATE TEMPLATE" : "EDIT TEMPLATE";
+      const saveLabel = isCreate ? "Create Template" : "Save Changes";
+      overlay.innerHTML = `
+        <div class="sys-window card-window" style="max-width:520px;">
+          <div class="tag">◆ ${heading} ◆</div>
+          <h3>${heading}</h3>
+          <div style="text-align:left;">
+            <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin-bottom:6px;">TEMPLATE NAME</label>
+            <input type="text" id="editTemplateName" maxlength="30" value="${escapeHtml(editName)}" placeholder="e.g. Push Day, Morning Circuit" class="settings-input" style="margin-bottom:14px;" />
+
+            <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin-bottom:6px;">ADD EXERCISE</label>
+            <div class="builder-row" style="margin-bottom:4px;">
+              <select id="editTemplateExSelect">${renderExerciseOptions()}</select>
+              <input type="number" min="0" class="num-input" id="editTemplateValInput" placeholder="reps" />
+              <input type="number" min="0" step="0.5" class="num-input weight-input hidden" id="editTemplateWeightInput" placeholder="lbs" style="width:60px;" />
+              <button class="btn small" id="editTemplateAddSet">Add Set</button>
+            </div>
+            <div style="font-size:10px; color:var(--text-dim2); margin-bottom:14px;">Add sets one at a time per exercise. Weight field appears when ⚖ is enabled for the selected exercise in Manage Exercises.</div>
+
+            <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin-bottom:6px;">EXERCISES IN TEMPLATE</label>
+            <div id="editTemplatePills" style="max-height:200px; overflow-y:auto;">${renderEditPills()}</div>
+          </div>
+          <div style="display:flex; gap:10px; justify-content:center; margin-top:18px;">
+            <button class="btn ghost" id="cancelEditTemplate">Cancel</button>
+            <button class="btn primary" id="saveEditTemplate">${saveLabel}</button>
+          </div>
+        </div>
+      `;
+      bindEditEvents();
+    }
+
+    function bindEditEvents(){
+      const exSelect = overlay.querySelector("#editTemplateExSelect");
+      const valInput = overlay.querySelector("#editTemplateValInput");
+      const weightInput = overlay.querySelector("#editTemplateWeightInput");
+
+      function syncExerciseFields(){
+        const ex = allExercises().find(e=>e.id===exSelect.value);
+        const unit = ex ? (ex.type==="time"?"sec":ex.type==="minutes"?"min":"reps") : "reps";
+        const goal = ex ? baseGoalFor(ex) : "";
+        valInput.placeholder = goal ? `${goal} ${unit} (goal)` : unit;
+        const hasWeight = !!(state.exerciseWeights && state.exerciseWeights[exSelect.value]);
+        if(hasWeight){ weightInput.classList.remove("hidden"); }
+        else{ weightInput.classList.add("hidden"); weightInput.value = ""; }
+      }
+
+      if(exSelect){
+        exSelect.addEventListener("change", syncExerciseFields);
+        syncExerciseFields(); // set initial state for whichever exercise is selected on open
+      }
+
+      overlay.querySelector("#editTemplateAddSet").addEventListener("click", ()=>{
+        const id = exSelect.value;
+        const ex = allExercises().find(e=>e.id===id);
+        const raw = parseInt(valInput.value, 10);
+        const val = (raw && raw > 0) ? raw : (ex ? baseGoalFor(ex) : 0);
+        if(!ex || !val || val<=0){ valInput.focus(); return; }
+        let entry = editExercises.find(e=>e.id===id);
+        if(!entry){ entry = {id, sets:[], weights:[]}; editExercises.push(entry); }
+        if(!entry.weights) entry.weights = [];
+        entry.sets.push(val);
+        const w = parseFloat(weightInput.value);
+        entry.weights.push(w && w > 0 ? w : null);
+        valInput.value = "";
+        weightInput.value = "";
+        overlay.querySelector("#editTemplatePills").innerHTML = renderEditPills();
+        bindRemoveButtons();
+        valInput.focus();
+      });
+      valInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); overlay.querySelector("#editTemplateAddSet").click(); } });
+      weightInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); overlay.querySelector("#editTemplateAddSet").click(); } });
+
+      bindRemoveButtons();
+
+      overlay.querySelector("#saveEditTemplate").addEventListener("click", ()=>{
+        const newName = overlay.querySelector("#editTemplateName").value.trim();
+        if(!newName){ overlay.querySelector("#editTemplateName").focus(); return; }
+        if(isCreate && editExercises.length === 0){ return; }
+        editName = newName;
+        if(isCreate){
+          saveTemplate(editName, editExercises);
+        } else {
+          updateTemplate(t.id, editName, editExercises);
+        }
+        close();
+        render();
+      });
+      overlay.querySelector("#cancelEditTemplate").addEventListener("click", ()=>{
+        close();
+        showManageTemplatesOverlay(); // return to the list
+      });
+      overlay.addEventListener("click", (e)=>{ if(e.target===overlay){ close(); showManageTemplatesOverlay(); } });
+    }
+
+    function bindRemoveButtons(){
+      overlay.querySelectorAll("[data-remove-tedit]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          editExercises.splice(parseInt(btn.dataset.removeTedit, 10), 1);
+          overlay.querySelector("#editTemplatePills").innerHTML = renderEditPills();
+          bindRemoveButtons();
+        });
+      });
+    }
+
+    function close(){
+      overlay.classList.remove("show");
+      setTimeout(()=>overlay.remove(), 250);
+    }
+
+    document.body.appendChild(overlay);
+    requestAnimationFrame(()=>overlay.classList.add("show"));
+    refreshOverlay();
   }
 
   function renderPenaltyQuest(){
@@ -2154,7 +2710,14 @@
     if(!state.logs || state.logs.length===0) return `<div class="empty-note">No hunts recorded yet. Complete a quest to begin your log.</div>`;
     const sorted = state.logs.slice().sort((a,b)=> a.date<b.date?1:-1).slice(0,15);
     return sorted.map(l=>{
-      const items = l.entries.map(e=> `<b>${e.name}</b> ${e.sets.join("/")}${e.type==="time"?"s":e.type==="minutes"?"m":""}`).join(" · ");
+      const items = l.entries.map(e=>{
+        const unitSuffix = e.type==="time"?"s":e.type==="minutes"?"m":"";
+        const setsStr = e.sets.map((s,j)=>{
+          const w = e.weights && e.weights[j];
+          return w ? `${s}${unitSuffix}@${w}` : `${s}${unitSuffix}`;
+        }).join("/");
+        return `<b>${e.name}</b> ${setsStr}`;
+      }).join(" · ");
       return `<div class="hist-entry">
         <div class="hd">
           <span>${fmtDate(l.date)}</span>
@@ -2713,7 +3276,17 @@
       overlay.querySelectorAll("[data-goal-exercise]").forEach(input=>{
         input.addEventListener("change", ()=>{
           setDailyGoal(input.dataset.goalExercise, input.value);
-          render(); // refresh the job board goals behind the overlay
+          render();
+        });
+      });
+      overlay.querySelectorAll("[data-edit-exercise]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          showEditExerciseOverlay(btn.dataset.editExercise);
+        });
+      });
+      overlay.querySelectorAll("[data-weight-toggle]").forEach(input=>{
+        input.addEventListener("change", ()=>{
+          toggleExerciseWeight(input.dataset.weightToggle, input.checked);
         });
       });
     }
@@ -3079,6 +3652,7 @@
           <div class="builder-row" style="margin-bottom:14px;">
             <select id="backdateExerciseSelect">${renderExerciseOptions()}</select>
             <input type="number" min="0" class="num-input" id="backdateValueInput" placeholder="reps" />
+            <input type="number" min="0" step="0.5" class="num-input weight-input hidden" id="backdateWeightInput" placeholder="lbs" style="width:60px;" />
             <button class="btn small" id="backdateAddSetBtn">Add Set</button>
           </div>
           <div class="builder-pills" id="backdatePills"><div class="empty-note">No exercises added yet.</div></div>
@@ -3095,28 +3669,48 @@
 
     const exerciseSelect = overlay.querySelector("#backdateExerciseSelect");
     const valueInput = overlay.querySelector("#backdateValueInput");
+    const backdateWeightInput = overlay.querySelector("#backdateWeightInput");
     const pillsEl = overlay.querySelector("#backdatePills");
     const submitBtn = overlay.querySelector("#submitBackdateBtn");
 
     function placeholderFor(id){
       const ex = allExercises().find(e=>e.id===id);
-      return ex && ex.type === "time" ? "seconds" : ex && ex.type === "minutes" ? "minutes" : "reps";
+      if(!ex) return "reps";
+      const unit = ex.type === "time" ? "sec" : ex.type === "minutes" ? "min" : "reps";
+      const goal = baseGoalFor(ex);
+      return goal ? `${goal} ${unit} (goal)` : unit;
     }
-    exerciseSelect.addEventListener("change", ()=>{ valueInput.placeholder = placeholderFor(exerciseSelect.value); });
+    function syncBackdateWeight(){
+      const hasWeight = !!(state.exerciseWeights && state.exerciseWeights[exerciseSelect.value]);
+      if(hasWeight){ backdateWeightInput.classList.remove("hidden"); }
+      else{ backdateWeightInput.classList.add("hidden"); backdateWeightInput.value = ""; }
+    }
+    exerciseSelect.addEventListener("change", ()=>{
+      valueInput.placeholder = placeholderFor(exerciseSelect.value);
+      syncBackdateWeight();
+    });
     valueInput.placeholder = placeholderFor(exerciseSelect.value);
+    syncBackdateWeight();
 
     function refreshPills(){
       if(entries.length === 0){
         pillsEl.innerHTML = `<div class="empty-note">No exercises added yet.</div>`;
       } else {
-        pillsEl.innerHTML = entries.map((b,i)=>`
+        pillsEl.innerHTML = entries.map((b,i)=>{
+          const unitSuffix = b.type==="time" ? "s" : b.type==="minutes" ? "m" : "";
+          const setsDisplay = b.sets.map((s,j)=>{
+            const w = b.weights && b.weights[j];
+            return w ? `${s}${unitSuffix}@${w}` : `${s}${unitSuffix}`;
+          }).join(" · ");
+          return `
           <div class="pill-row">
             <span class="name">${escapeHtml(b.name)}</span>
             <span class="cat">${b.category}</span>
-            <span class="sets">${b.sets.join(" · ")}${b.type==="time" ? "s" : b.type==="minutes" ? "m" : ""}</span>
+            <span class="sets">${setsDisplay}</span>
             <button class="remove" data-backdate-remove="${i}" title="Remove">✕</button>
           </div>
-        `).join("");
+        `;
+        }).join("");
         pillsEl.querySelectorAll("[data-backdate-remove]").forEach(btn=>{
           btn.addEventListener("click", ()=>{
             entries.splice(parseInt(btn.dataset.backdateRemove,10),1);
@@ -3130,12 +3724,17 @@
     overlay.querySelector("#backdateAddSetBtn").addEventListener("click", ()=>{
       const id = exerciseSelect.value;
       const ex = allExercises().find(e=>e.id===id);
-      const val = parseInt(valueInput.value, 10);
+      const raw = parseInt(valueInput.value, 10);
+      const val = (raw && raw > 0) ? raw : (ex ? baseGoalFor(ex) : 0);
       if(!ex || !val || val<=0){ valueInput.focus(); return; }
       let entry = entries.find(b=>b.id===id);
-      if(!entry){ entry = {id:ex.id, name:ex.name, category:ex.category, type:ex.type, sets:[]}; entries.push(entry); }
+      if(!entry){ entry = {id:ex.id, name:ex.name, category:ex.category, type:ex.type, sets:[], weights:[]}; entries.push(entry); }
+      if(!entry.weights) entry.weights = [];
       entry.sets.push(val);
+      const w = backdateWeightInput && !backdateWeightInput.classList.contains("hidden") ? parseFloat(backdateWeightInput.value) : null;
+      entry.weights.push(w && w > 0 ? w : null);
       valueInput.value = "";
+      if(backdateWeightInput) backdateWeightInput.value = "";
       refreshPills();
       valueInput.focus();
     });
@@ -3165,6 +3764,22 @@
 
     const openBackdateBtn = document.getElementById("openBackdateBtn");
     if(openBackdateBtn){ openBackdateBtn.addEventListener("click", showBackdateOverlay); }
+
+    const saveAsTemplateBtn = document.getElementById("saveAsTemplateBtn");
+    if(saveAsTemplateBtn){ saveAsTemplateBtn.addEventListener("click", showSaveAsTemplateOverlay); }
+
+    const manageTemplatesBtn = document.getElementById("manageTemplatesBtn");
+    if(manageTemplatesBtn){ manageTemplatesBtn.addEventListener("click", showManageTemplatesOverlay); }
+
+    const templateSelect = document.getElementById("templateSelect");
+    const quicklogBtn = document.getElementById("quicklogSelectedTemplate");
+    const loadBtn = document.getElementById("loadSelectedTemplate");
+    if(quicklogBtn && templateSelect){
+      quicklogBtn.addEventListener("click", ()=>{ quickLogTemplate(templateSelect.value); });
+    }
+    if(loadBtn && templateSelect){
+      loadBtn.addEventListener("click", ()=>{ loadTemplateIntoBuilder(templateSelect.value); });
+    }
 
     document.querySelectorAll("[data-equip-title]").forEach(btn=>{
       btn.addEventListener("click", ()=>{ toggleEquipTitle(btn.dataset.equipTitle); });
@@ -3204,8 +3819,12 @@
 
     const exerciseSelect = document.getElementById("exerciseSelect");
     const setValueInput = document.getElementById("setValueInput");
+    const setWeightInput = document.getElementById("setWeightInput");
     if(exerciseSelect){
-      exerciseSelect.addEventListener("change", ()=>{ setValueInput.placeholder = currentPlaceholder(); });
+      exerciseSelect.addEventListener("change", ()=>{
+        setValueInput.placeholder = currentPlaceholder();
+        updateWeightVisibility();
+      });
     }
 
     const addSetBtn = document.getElementById("addSetBtn");
@@ -3213,12 +3832,17 @@
       addSetBtn.addEventListener("click", ()=>{
         const id = exerciseSelect.value;
         const ex = allExercises().find(e=>e.id===id);
-        const val = parseInt(setValueInput.value, 10);
+        const raw = parseInt(setValueInput.value, 10);
+        const val = (raw && raw > 0) ? raw : (ex ? baseGoalFor(ex) : 0);
         if(!ex || !val || val<=0){ setValueInput.focus(); return; }
         let entry = builder.find(b=>b.id===id);
-        if(!entry){ entry = {id:ex.id, name:ex.name, category:ex.category, type:ex.type, sets:[]}; builder.push(entry); }
+        if(!entry){ entry = {id:ex.id, name:ex.name, category:ex.category, type:ex.type, sets:[], weights:[]}; builder.push(entry); }
+        if(!entry.weights) entry.weights = [];
         entry.sets.push(val);
+        const weight = setWeightInput && !setWeightInput.classList.contains("hidden") ? parseFloat(setWeightInput.value) : null;
+        entry.weights.push(weight && weight > 0 ? weight : null);
         setValueInput.value = "";
+        if(setWeightInput) setWeightInput.value = "";
         render();
         document.getElementById("exerciseSelect").value = id;
         document.getElementById("setValueInput").focus();
@@ -3226,6 +3850,9 @@
     }
     if(setValueInput){
       setValueInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); addSetBtn.click(); } });
+    }
+    if(setWeightInput){
+      setWeightInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); addSetBtn.click(); } });
     }
 
     const openExerciseMgrBtn = document.getElementById("openExerciseMgrBtn");
