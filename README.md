@@ -1,3 +1,4 @@
+Hello
 # Shadow Log — A Solo Leveling Workout Tracker
 
 Shadow Log is a calisthenics/cardio tracker themed after *Solo Leveling*. Instead of a plain checklist, your workouts level you up, raise your Hunter Rank, grow three stats (STR / AGI / VIT), challenge you with scaling Daily Goals, pit you against a Weekly Boss, and let you save reusable Workout Templates — with a shareable "Guild Member Card" you can flex on Discord.
