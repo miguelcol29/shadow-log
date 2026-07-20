@@ -1,6 +1,6 @@
 # Shadow Log — A Solo Leveling Workout Tracker
 
-Shadow Log is a calisthenics/cardio tracker themed after *Solo Leveling*. Instead of a plain checklist, your workouts level you up, raise your Hunter Rank, grow three stats (STR / AGI / VIT), challenge you with scaling Daily Goals, and pit you against a Weekly Boss — with a shareable "Guild Member Card" you can flex on Discord.
+Shadow Log is a calisthenics/cardio tracker themed after *Solo Leveling*. Instead of a plain checklist, your workouts level you up, raise your Hunter Rank, grow three stats (STR / AGI / VIT), challenge you with scaling Daily Goals, pit you against a Weekly Boss, and let you save reusable Workout Templates — with a shareable "Guild Member Card" you can flex on Discord.
 
 It's a single HTML file. How you open it determines where your progress is saved — see below.
 
@@ -63,6 +63,7 @@ Neither mode is "better" — just pick based on what you want: Claude sync if yo
 - Every exercise has a **Daily Goal** — a real target to push toward (e.g. 50 push-ups), not just "log something." Set your own baseline per exercise via the **⚙ icon on the Freelance Quest panel**; leave it blank to use the sensible default.
 - Goals are **cumulative for the day** — every set across every quest you log counts toward them. Hit your goal and it's cleared for the day.
 - **Gate Rank** (E through S, selectable on the Job Board) scales your goals up, the same way gates have difficulty ranks in the show — D-Gate is 1.25× your baseline, C is 1.5×, climbing to **2.5× at S-Gate**. It defaults to your Hunter Rank but you can raise or lower it any time to push yourself harder (or ease off).
+- **Tip:** when adding a set, leave the number field blank and hit Add Set — it automatically fills in your Daily Goal for that exercise, so you don't have to type it out if that's exactly what you're aiming for.
 
 ### Guild Job Board
 - Each day posts a set of suggested "contracts" (exercises) based on a weekly roster you can customize: Strength day, Agility day, Vitality day, Full Hunt (mix of all three), or Guild Holiday (rest day). Edit the roster from "⚙ Edit guild roster" on the board.
@@ -70,9 +71,20 @@ Neither mode is "better" — just pick based on what you want: Claude sync if yo
 - Each contract card shows your gate-scaled **Daily Goal** with a live progress bar. Hit **Accept Contract** to select that exercise and start logging real sets toward it — accepting no longer auto-fills a single giant set, since the goal is meant to take multiple sets across the day.
 
 ### Weekly Boss
-- Every **Monday**, a named boss spawns with an HP bar (deterministic per week — reloading the app won't reroll it, but next week gets a fresh one from a pool of 12).
+- Every **Monday**, a named boss spawns with an HP bar (deterministic per week — reloading the app won't reroll it, but next week gets a fresh one from a pool of 12, each with its own portrait art).
 - **Every XP you earn Monday–Sunday deals that much damage** to the boss — streak bonuses included. No new logging required; it's computed live from your quests.
-- Boss HP is **adaptive**: roughly 15% above your average weekly XP over the last 3 weeks, with a rank-based minimum floor so it's never trivial. HP locks the moment the boss spawns.
+- Boss HP is **adaptive**: roughly 15% above your average weekly XP over the last 3 weeks (averaged only across weeks that actually have data, so your early weeks aren't deflated), with a rank-based minimum floor so it's never trivial:
+
+| Gate Rank | Minimum HP Floor |
+|---|---|
+| E | 400 |
+| D | 500 |
+| C | 650 |
+| B | 850 |
+| A | 1,100 |
+| S | 1,500 |
+
+- HP **locks the moment the boss spawns** — it won't change mid-week even if your Gate Rank changes.
 - **Slay it** (deplete its HP before Sunday ends) to claim a bounty worth 20% of its HP, awarded straight to your XP. **Fail to**, and it escapes — no penalty, just a record.
 - A collapsible **Boss Log** ("📜 View boss log") keeps your last 12 weeks of results — slain or escaped.
 
@@ -83,25 +95,47 @@ Neither mode is "better" — just pick based on what you want: Claude sync if yo
 - This offer appears **at most once every 14 days**, so it's a genuine second chance, not a safety net you can lean on weekly.
 
 ### Freelance Quest
-- This is your manual override — log any exercise directly from the dropdown, or add a one-off custom exercise (soccer, disc golf, whatever) via the **⚙ gear icon** in the panel's corner. The same panel lets you set custom Daily Goals per exercise and remove exercises you don't want cluttering the dropdown (fully reversible any time).
-- You're never required to follow the board — freelance logging is always available.
+Your main logging area, and the most feature-dense panel in the app — tap the **(i)** next to its title any time for a full in-app refresher. Here's what lives there:
+
+- **Log anything:** pick an exercise from the dropdown, enter reps/seconds/minutes (or leave it blank to auto-fill your Daily Goal), hit **Add Set**, repeat for each set, then **Complete Quest**.
+- **⚙ Manage Exercises** (gear icon, top-right of the panel): a full toolkit per exercise —
+  - **Add** a custom exercise (soccer, disc golf, anything not in the default list)
+  - **✎ Edit** — fix a typo or move an exercise to a different category (STR/AGI/VIT). Past logs keep their original name/category for historical accuracy; only future logging changes.
+  - **Daily Goal** input — set your own baseline per exercise.
+  - **⚖ Weight toggle** — enable to track load (lbs) per set for that exercise. Once on, a weight field appears next to the reps input everywhere you log that exercise (Freelance Quest, templates, backdated entries), and sets display as `12@25` notation.
+  - **Remove/Restore** — hide an exercise from the dropdown and Job Board without deleting its history; fully reversible.
+- **Workout Templates:** save a full workout (exercises + set/rep/weight numbers) once, then reuse it instead of rebuilding it from scratch every time. See the dedicated section below.
+- **📅 Log a Past Day:** backdate a workout for any day in the last 14 days. No streak bonus applies (base XP only), but the entry fills in your streak history properly (it can bridge gaps and extend a streak backward) and still counts toward the active Weekly Boss if that date falls in the current week.
+
+### Workout Templates
+For workouts you repeat — Push Day, a park circuit, whatever your schedule looks like — save it once and stop rebuilding it every session.
+
+- **Two ways to create one:**
+  - **💾 Save as Template** (appears after completing any quest) — captures exactly what you just logged, sets and weights included, as a new named template.
+  - **📋 Manage Templates → + Create New Template** — build one from scratch ahead of time using the same exercise-and-set picker, without needing to log a real workout first.
+- **Using a saved template:** pick it from the dropdown above the exercise selector, then choose:
+  - **⚡ Log** — Quick Log. Instantly logs every exercise and set exactly as saved, after a confirmation screen listing everything about to be logged (so nothing goes in blind). Fastest path — one tap plus a confirm.
+  - **↗ Load** — drops the template into the builder as normal, editable pills so you can tweak a number, add an extra set, or drop an exercise before hitting Complete Quest. Best for days that don't go exactly to plan.
+- **Editing a template:** 📋 Manage Templates → **Edit** on any template — rename it, add exercises, remove exercises, or adjust saved set/weight values. Changes only apply going forward.
+- **Deleting a template:** same menu, **Delete** (asks for confirmation first).
+- Templates have no limit — create as many as you want.
 
 ### Achievements & Titles
-- The **ACHIEVEMENTS** panel tracks 17 unlockable milestones — streak length, level, days hunted, goal clears, boss kills, penalty-quest redemption, stat tiers, and more. Locked ones show dimmed with a 🔒; unlocked ones glow gold.
+- The **ACHIEVEMENTS** panel tracks 19 unlockable milestones — streak length, level, days hunted, goal clears, S-Gate clears, boss kills, penalty-quest redemption, stat tiers, variety, and template usage (saving your first template, Quick Logging 10 times). Locked ones show dimmed with a 🔒; unlocked ones glow gold.
 - Each achievement grants a **title** you can equip (one at a time) — it displays under your name at the top of the app and gets drawn directly onto your **Guild Member Card**.
-- Progress you already had before this feature existed unlocks retroactively and silently the first time you open the updated app.
+- Progress you already had before a given achievement existed unlocks retroactively and silently the next time you open the app.
 
 ### Dashboard
 - **Consistency (heatmap):** shows the last 12 weeks of activity, darker = more XP that day.
 - **Progress (chart):** pick any exercise you've logged to see your daily totals (reps/seconds/minutes) over your last 14 sessions.
-- **Quest History:** your last 15 logged days, most recent first — each one has a ✕ to remove it if you logged something by mistake. Removing a day automatically recalculates your Level, XP, and streak so nothing stays inflated. (Achievement and boss-kill honors are never revoked by this, even retroactively.)
+- **Quest History:** your last 15 logged days, most recent first, including weight notation where applicable — each one has a ✕ to remove it if you logged something by mistake. Removing a day automatically recalculates your Level, XP, and streak so nothing stays inflated. (Achievement and boss-kill honors are never revoked by this, even retroactively.)
 
 ### Hunter Profile & Guild Member Card
 - Tap the **⚙ gear icon** (top-right corner of the app) to set your Hunter Name, upload an avatar photo, and manage your data backup.
 - Your name, equipped title, and avatar show at the top of the app and get baked directly into your **Guild Member Card** — a shareable snapshot (Level, Rank, stats, streak, title) styled like a license card. Generate one from the "GUILD MEMBER CARD" panel and download it as an image to post in Discord.
 
 ### Data Backup
-- In **⚙ Settings**, under "DATA BACKUP": **Export Backup** downloads your entire save (level, XP, logs, achievements, boss history, everything) as a JSON file. **Import Backup** restores from one, after showing you what's inside and confirming — since it replaces whatever is currently saved.
+- In **⚙ Settings**, under "DATA BACKUP": **Export Backup** downloads your entire save (level, XP, logs, achievements, boss history, templates, everything) as a JSON file. **Import Backup** restores from one, after showing you what's inside and confirming — since it replaces whatever is currently saved.
 - This is the safety net for standalone/browser-saved mode (export before clearing browser data, or to move progress to another device), and it also works as a manual sync between a Claude-hosted copy and a standalone one, since both use the same data format.
 
 ### Resetting
@@ -110,8 +144,9 @@ Neither mode is "better" — just pick based on what you want: Claude sync if yo
 ---
 
 ## A Few Tips
-- Info bubbles (small "i" icons) sit next to Level, Rank, XP, STR/AGI/VIT, Hunt Streak, Gate Rank, Weekly Boss, and Penalty Quest — tap any of them for a quick explanation of exactly how that number or mechanic works.
-- Your streak, XP, stats, achievements, and boss records are permanent and never wiped unless you use Reset.
+- Info bubbles (small "i" icons) sit next to Level, Rank, XP, STR/AGI/VIT, Hunt Streak, Gate Rank, Weekly Boss, Penalty Quest, and Freelance Quest — tap any of them for a quick explanation of exactly how that number or mechanic works.
+- Leave the reps/seconds/minutes field blank when adding a set to auto-fill your Daily Goal for that exercise — handy when you're hitting your target exactly.
+- Your streak, XP, stats, achievements, templates, and boss records are permanent and never wiped unless you use Reset.
 - If you get an updated version of this file later, opening it again won't erase your existing progress — your data lives in storage separate from the file itself (tied to your account in Claude, or to your browser in standalone mode). Exporting a backup beforehand is always a safe habit when updating.
 
 Good luck, Hunter.
