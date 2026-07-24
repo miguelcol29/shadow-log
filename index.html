@@ -905,10 +905,19 @@
   // weight raises the ratio linearly — 10 reps at 100 lbs is exactly twice 10 reps at 50 lbs.
   // Time-based cardio can't be scored by load, so it uses METs (metabolic equivalents), the
   // standard intensity measure: jogging at ~7 METs outpaces walking at ~3.5 per minute.
-  const XP_MODEL_VERSION = 2;
+  //
+  // Pure external-load lifts (curls, flies, extensions — where your body isn't the resistance)
+  // get a third path, because raw poundage isn't comparable across movement patterns. A 10 lb
+  // dumbbell at the end of an extended arm is brutal; 10 lbs on a leg press is nothing. The
+  // System can't know leverage, so you tell it your WORKING LOAD for that movement — the weight
+  // where a set is a real fight — and every set is scored as a fraction of it. Doubling the
+  // weight still exactly doubles the XP; the working load just sets what "hard" means here.
+  const XP_MODEL_VERSION = 3;
   const DEFAULT_BODYWEIGHT = 175; // lbs — overridden in Settings
   // Calibration constants, tuned so a typical session lands near the old flat-rate XP totals.
   const XP_K = { reps: 2.0, time: 0.7, met: 0.45 };
+  // A rep at your working load is worth this much bodyweight-equivalent — roughly a push-up.
+  const HARD_SET_EQUIVALENT = 0.6;
   // Fraction of bodyweight moved per rep (or supported, for holds).
   const DEFAULT_LOAD_FRACTION = {
     pushups:0.64, pullups:1.0, dips:0.95, rows:0.55,
@@ -942,16 +951,34 @@
     if(DEFAULT_MET[ex.id] != null) return DEFAULT_MET[ex.id];
     return FALLBACK_MET;
   }
-  // XP for one set. `weight` is the external load in lbs for that set, if any.
+  // Your working load for an external-load lift, in whatever units you log (per-dumbbell or
+  // total — it cancels out of the ratio, so it only has to be consistent with itself).
+  function workingLoadFor(ex){
+    const wl = state && state.exerciseWorkingLoads && state.exerciseWorkingLoads[ex.id];
+    return (typeof wl === "number" && wl > 0) ? wl : null;
+  }
+  // XP for one set. `weight` is the external load for that set, if any.
   function setXp(ex, amount, weight){
     if(!amount || amount <= 0) return 0;
     if(ex.type === "minutes") return amount * metFor(ex) * XP_K.met;
     const bw = bodyweightLbs();
     const ext = (typeof weight === "number" && weight > 0) ? weight : 0;
-    let ratio = (loadFractionFor(ex) * bw + ext) / bw;
-    // An external-load lift logged without a weight would otherwise score zero. It falls back to a
-    // deliberately conservative rate: low enough that entering the real number always pays better
-    // than leaving it blank, so the model never rewards under-logging.
+    const fraction = loadFractionFor(ex);
+    let ratio;
+    if(fraction > 0){
+      // A bodyweight movement, optionally loaded. Physically grounded: your body is the base
+      // resistance and anything you strap on adds to it.
+      ratio = (fraction * bw + ext) / bw;
+    } else if(ext > 0){
+      // A pure external-load lift, scored against your working load rather than against you.
+      const wl = workingLoadFor(ex);
+      ratio = (wl ? (ext / wl) : 1) * HARD_SET_EQUIVALENT;
+    } else {
+      ratio = 0;
+    }
+    // A loaded lift logged without a weight would otherwise score zero. It falls back to a
+    // deliberately conservative rate: low enough that entering the real number always pays
+    // better than leaving it blank, so the model never rewards under-logging.
     if(ratio <= 0) ratio = MISSING_WEIGHT_FRACTION;
     return amount * ratio * (ex.type === "time" ? XP_K.time : XP_K.reps);
   }
@@ -961,8 +988,13 @@
     (sets||[]).forEach((s,i)=>{ total += setXp(ex, s, weights && weights[i]); });
     return Math.round(total);
   }
-  // Effective XP per unit shown in the UI, at the exercise's unweighted baseline.
+  // Effective XP per unit shown in the UI. Bodyweight movements are quoted unloaded; external
+  // lifts are quoted at their working load, since unloaded is meaningless for those.
   function baseRateFor(ex){
+    if(ex.type !== "minutes" && loadFractionFor(ex) <= 0){
+      const wl = workingLoadFor(ex);
+      return setXp(ex, 1, wl || 1);
+    }
     return setXp(ex, 1, null);
   }
 
@@ -1005,7 +1037,7 @@
   const INFO_CONTENT = {
     level: { title:"LEVEL", text:"Every rep, second held, or minute logged earns XP, scaled by how hard it actually was. Fill the XP bar to level up. XP needed for the next level = round(55 × level^1.55), so each level takes progressively more than the last." },
     rank: { title:"RANK", text:"Rank is just a badge tied to your level, not a separate track: E (1–9), D (10–19), C (20–29), B (30–39), A (40–49), S (50+). Leveling up is what moves your rank." },
-    xp: { title:"XP", text:"XP measures load moved, not volume logged. Each rep scores against the share of your bodyweight the movement carries — a pull-up moves ~100%, a push-up ~64%, a squat ~45% — and any weight you log on a set is added straight on top, so 10 reps at 100 lbs earns exactly double 10 reps at 50 lbs. Holds work the same way per second. Cardio is scored by METs (intensity per minute) rather than flat time, so jogging outearns walking minute for minute. Set your bodyweight in Settings to calibrate the whole scale, and adjust an exercise's load in Manage Exercises if the default misjudges how hard it is for you. Your current Hunt Streak bonus (up to +25%) is added on top of every quest's XP. Total fills the bar toward your next level; leftover carries into the new bar after a level-up." },
+    xp: { title:"XP", text:"XP measures load moved, not volume logged. Each rep scores against the share of your bodyweight the movement carries — a pull-up moves ~100%, a push-up ~64%, a squat ~45% — and any weight you log on a set is added straight on top, so 10 reps at 100 lbs earns exactly double 10 reps at 50 lbs. Holds work the same way per second. Cardio is scored by METs (intensity per minute) rather than flat time, so jogging outearns walking minute for minute. Set your bodyweight in Settings to calibrate the whole scale, and For lifts where your body isn't the resistance — curls, flies, extensions — pounds alone can't be compared across movements, so those are scored against a working load you set: the weight at which a set is a real fight. Adjust any of this in Manage Exercises if a default misjudges how hard something is for you. Your current Hunt Streak bonus (up to +25%) is added on top of every quest's XP. Total fills the bar toward your next level; leftover carries into the new bar after a level-up." },
     str: { title:"STR", text:"Counts distinct Strength exercises you've logged — 1 point per exercise per day (2 different STR moves in one day = 2 points). Tier I: 0–100. Tier II: 100–1000, progress carries over. Tier MAX once you pass 1000, no further cap." },
     agi: { title:"AGI", text:"Counts distinct Agility exercises you've logged — 1 point per exercise per day (2 different AGI moves in one day = 2 points). Tier I: 0–100. Tier II: 100–1000, progress carries over. Tier MAX once you pass 1000, no further cap." },
     vit: { title:"VIT", text:"Counts distinct Vitality exercises you've logged — 1 point per exercise per day (2 different VIT moves in one day = 2 points). Tier I: 0–100. Tier II: 100–1000, progress carries over. Tier MAX once you pass 1000, no further cap." },
@@ -1923,6 +1955,7 @@
             ? Math.round(state.exerciseLoads[ex.id] * 100) : "";
           const customMet = (state.exerciseMets && typeof state.exerciseMets[ex.id] === "number")
             ? state.exerciseMets[ex.id] : "";
+          const customWorking = workingLoadFor(ex) || "";
           const rateLabel = `Currently ${Math.round(baseRateFor(ex)*100)/100} XP per ${unit === "sec" ? "second" : unit === "min" ? "minute" : "rep"}`;
           return `<div class="ex-mgr-row ${isHidden?"is-hidden":""}">
             <span class="ex-mgr-name">${escapeHtml(ex.name)}</span>
@@ -1935,6 +1968,10 @@
                    <span class="ex-mgr-unit" title="${rateLabel}">METs</span>`
                 : `<input type="number" min="0" max="300" step="1" class="ex-mgr-load-input" data-load-exercise="${ex.id}" data-load-kind="bw" placeholder="${Math.round(loadFractionFor(ex)*100)}" value="${customLoadPct || ""}" title="Percent of your bodyweight moved per ${unit === "sec" ? "second held" : "rep"} — this is what sets the exercise's XP rate" />
                    <span class="ex-mgr-unit" title="${rateLabel}">% BW</span>`}
+              ${(!isCardio && hasWeight)
+                ? `<input type="number" min="1" max="1000" step="1" class="ex-mgr-load-input" data-load-exercise="${ex.id}" data-load-kind="working" placeholder="—" value="${customWorking || ""}" title="Your working load — the weight where a set of 10 is a real fight. Log it the same way you log your sets (per dumbbell or total). This is what makes the XP fair for movements where a light weight is still brutal." />
+                   <span class="ex-mgr-unit" title="${rateLabel}">hard @</span>`
+                : ""}
               <label class="ex-mgr-weight-toggle" title="Track weight for this exercise">
                 <input type="checkbox" data-weight-toggle="${ex.id}" ${hasWeight ? "checked" : ""} /> <span class="ex-mgr-weight-label">⚖</span>
               </label>
@@ -1944,7 +1981,7 @@
         }).join("")}
       </div>`;
     }).join("");
-    return rows + `<div class="ex-mgr-note"><b>% BW</b> is what drives XP: the share of your bodyweight the movement actually moves (push-up ≈ 64%, squat ≈ 45%, pull-up ≈ 100%). Any weight you log for a set is added on top, so 10 reps at 100 lbs earns exactly double 10 reps at 50 lbs. Cardio uses <b>METs</b> instead — intensity per minute, where walking ≈ 3.5 and jogging ≈ 7. Hover a rate to see the XP it produces, and raise a number if an exercise feels harder for you than the default assumes. Set your bodyweight in ⚙ Settings. ✎ Edit = rename or change category. ⚖ Weight = track load (lbs/kg) when logging sets. Daily Goal is your E-Gate baseline — the Job Board scales it up with your Gate Rank. Leave blank to use the default. Removed exercises hide from the dropdown/Job Board but past logs are untouched.</div>`;
+    return rows + `<div class="ex-mgr-note"><b>% BW</b> is what drives XP: the share of your bodyweight the movement actually moves (push-up ≈ 64%, squat ≈ 45%, pull-up ≈ 100%). Any weight you log for a set is added on top, so 10 reps at 100 lbs earns exactly double 10 reps at 50 lbs. Cardio uses <b>METs</b> instead — intensity per minute, where walking ≈ 3.5 and jogging ≈ 7. For ⚖ lifts where your body isn't the resistance (curls, flies, extensions), set <b>hard @</b> — the weight at which a set of 10 is a real fight. Those lifts are scored against that number instead of against your bodyweight, which is how a light dumbbell on a brutal movement stops being underpaid. Log it in the same units you log your sets — per dumbbell or total, it only has to match itself. Hover a rate to see the XP it produces, and raise a number if an exercise feels harder for you than the default assumes. Set your bodyweight in ⚙ Settings. ✎ Edit = rename or change category. ⚖ Weight = track load (lbs/kg) when logging sets. Daily Goal is your E-Gate baseline — the Job Board scales it up with your Gate Rank. Leave blank to use the default. Removed exercises hide from the dropdown/Job Board but past logs are untouched.</div>`;
   }
 
   function setDailyGoal(id, value){
@@ -1970,6 +2007,14 @@
     const num = parseFloat(value);
     if(isNaN(num) || num <= 0){ delete state.exerciseMets[id]; }
     else{ state.exerciseMets[id] = Math.min(25, num); }
+    saveState();
+  }
+
+  function setWorkingLoad(id, value){
+    state.exerciseWorkingLoads = state.exerciseWorkingLoads || {};
+    const num = parseFloat(value);
+    if(isNaN(num) || num <= 0){ delete state.exerciseWorkingLoads[id]; }
+    else{ state.exerciseWorkingLoads[id] = Math.min(1000, num); }
     saveState();
   }
 
@@ -3399,6 +3444,7 @@
       overlay.querySelectorAll("[data-load-exercise]").forEach(input=>{
         input.addEventListener("change", ()=>{
           if(input.dataset.loadKind === "met"){ setMet(input.dataset.loadExercise, input.value); }
+          else if(input.dataset.loadKind === "working"){ setWorkingLoad(input.dataset.loadExercise, input.value); }
           else{ setLoadFraction(input.dataset.loadExercise, input.value); }
           refreshList();
           render();
@@ -3407,6 +3453,7 @@
       overlay.querySelectorAll("[data-weight-toggle]").forEach(input=>{
         input.addEventListener("change", ()=>{
           toggleExerciseWeight(input.dataset.weightToggle, input.checked);
+          refreshList();
         });
       });
     }
@@ -4052,10 +4099,33 @@
     if(state.xpModelVersion === XP_MODEL_VERSION) return null;
     const hadHistory = (state.logs||[]).length > 0;
     const before = state.level;
+    // v3: external-load lifts need a working load. Seed each one from the heaviest weight it
+    // appears with in your history — a defensible first guess that you then correct in
+    // Manage Exercises. Anything already set by hand is left alone.
+    state.exerciseWorkingLoads = state.exerciseWorkingLoads || {};
+    const seeded = [];
+    const heaviest = {};
+    (state.logs||[]).forEach(log=>{
+      (log.entries||[]).forEach(e=>{
+        (e.weights||[]).forEach(w=>{
+          if(typeof w === "number" && w > 0){ heaviest[e.id] = Math.max(heaviest[e.id]||0, w); }
+        });
+      });
+    });
+    allExercises().forEach(ex=>{
+      if(ex.type === "minutes") return;
+      if(!(state.exerciseWeights && state.exerciseWeights[ex.id])) return;
+      if(loadFractionFor(ex) > 0) return; // a loaded bodyweight movement scores against you, not a working load
+      if(state.exerciseWorkingLoads[ex.id] > 0) return;
+      if(heaviest[ex.id] > 0){
+        state.exerciseWorkingLoads[ex.id] = heaviest[ex.id];
+        seeded.push(ex.name);
+      }
+    });
     if(hadHistory){ recomputeAllLogXp(); }
     state.xpModelVersion = XP_MODEL_VERSION;
     saveState();
-    return hadHistory ? { before, after: state.level } : null;
+    return hadHistory ? { before, after: state.level, seeded } : null;
   }
 
   function showNoticeOverlay(tagText, title, bodyHtml){
@@ -4102,10 +4172,15 @@
       const moved = migration.after === migration.before
         ? `Your Level held at <b>${migration.after}</b>.`
         : `Your Level moved from <b>${migration.before}</b> to <b>${migration.after}</b>.`;
+      const seededNote = (migration.seeded && migration.seeded.length)
+        ? `<p style="margin:0 0 10px;">The System has guessed a working load for ${migration.seeded.map(n=>`<b>${escapeHtml(n)}</b>`).join(", ")} from the heaviest weight in your history. Check those numbers in <b>⚙ Manage Exercises</b> — a guess is not a measurement, and this one directly sets what those lifts are worth.</p>`
+        : "";
       showNoticeOverlay("SYSTEM RECALIBRATION", "EFFORT REWEIGHTED",
-        `<p style="margin:0 0 10px;">The System no longer counts reps — it weighs the load behind them. Every rep is now scored against your own bodyweight, and any weight you log is added on top, so ten reps at 100 lbs is worth exactly twice ten reps at 50 lbs. Cardio is scored by intensity per minute instead of flat time.</p>
-         <p style="margin:0 0 10px;">Your entire hunt history has been rescored under the new measure. ${moved}</p>
-         <p style="margin:0;">Set your bodyweight in <b>⚙ Settings</b> to calibrate it properly — the default assumes ${DEFAULT_BODYWEIGHT} lbs. Per-exercise load values live in <b>⚙ Manage Exercises</b>.</p>`);
+        `<p style="margin:0 0 10px;">The System weighs the load behind a rep, not the rep itself. Bodyweight movements are scored against your own bodyweight, with anything you strap on added to it. Cardio is scored by intensity per minute.</p>
+         <p style="margin:0 0 10px;">Lifts where your body isn't the resistance — curls, flies, extensions — are now scored against your <b>working load</b> instead: the weight at which a set is a genuine fight. Poundage alone can't be compared across movements, so this is how the System learns that a light dumbbell can still be brutal. Doubling the weight still exactly doubles the XP.</p>
+         ${seededNote}
+         <p style="margin:0 0 10px;">Your entire hunt history has been rescored. ${moved}</p>
+         <p style="margin:0;">Set your bodyweight in <b>⚙ Settings</b> — the default assumes ${DEFAULT_BODYWEIGHT} lbs and it calibrates everything.</p>`);
     }
   }
   init();
