@@ -252,31 +252,6 @@
   .penalty-panel.cleared::before{ border-top-color: var(--green); border-left-color: var(--green); }
   .penalty-panel.cleared::after{ border-bottom-color: var(--green); border-right-color: var(--green); }
   .penalty-panel.cleared .penalty-eyebrow{ color: var(--green); }
-
-  /* Progressive overload advisory */
-  .overload-panel{ border-color: rgba(246,196,83,0.45); }
-  .overload-panel::before{ border-top-color: var(--gold); border-left-color: var(--gold); }
-  .overload-panel::after{ border-bottom-color: var(--gold); border-right-color: var(--gold); }
-  .overload-eyebrow{ color: var(--gold); }
-  .overload-dot{ background: var(--gold) !important; box-shadow: 0 0 8px var(--gold) !important; }
-  .overload-intro{ font-size:13px; color: var(--text-dim2); margin:-6px 0 14px; }
-  .overload-rows{ display:flex; flex-direction:column; gap:12px; }
-  .overload-row{ display:flex; align-items:center; gap:12px; font-size:13px; flex-wrap:wrap; }
-  .overload-ex-name{ flex-basis: 200px; flex-shrink:0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
-  .overload-ex-name span{ font-size:11px; letter-spacing:1.5px; margin-right:6px; }
-  .overload-detail{ flex:1; min-width: 180px; color: var(--text-mid); }
-  .overload-detail b{ color: var(--gold); font-family:'JetBrains Mono', monospace; }
-  .overload-detail small{ display:block; color: var(--text-dim2); font-size:11px; margin-top:2px; }
-  .overload-actions{ display:flex; gap:8px; flex-shrink:0; }
-  .overload-accept-btn{ border-color: rgba(246,196,83,0.55); color: var(--gold); }
-  .overload-accept-btn:hover{ box-shadow: 0 0 14px rgba(246,196,83,0.3); }
-
-  /* Personal records */
-  .pr-banner{ color: var(--purple) !important; text-shadow: 0 0 12px rgba(192,175,255,0.5) !important; }
-  .pr-banner .pr-detail-line{ display:block; font-family:'Rajdhani', sans-serif; font-size:13px; font-weight:600; margin-top:4px; letter-spacing:0.5px; color: var(--text); }
-  .pr-strip{ display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:10px; font-size:12px; color: var(--text-mid); font-family:'JetBrains Mono', monospace; }
-  .pr-strip b{ color: var(--purple); }
-  .pr-strip .pr-date{ color: var(--text-dim2); }
   .penalty-panel.cleared .penalty-dot{ background: var(--green) !important; box-shadow: 0 0 8px var(--green) !important; }
   .penalty-restored-banner{ color: var(--green) !important; text-shadow: 0 0 12px rgba(52,211,153,0.5) !important; }
   @media (max-width: 560px){
@@ -656,7 +631,7 @@
   .ex-mgr-name{ flex:1; min-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .ex-mgr-actions{ display:flex; align-items:center; gap:6px; flex-shrink:0; flex-wrap:wrap; }
   .ex-mgr-edit-btn{ padding:4px 8px !important; font-size:13px !important; }
-  .ex-mgr-goal-input{
+  .ex-mgr-goal-input, .ex-mgr-load-input{
     width:58px;
     background: rgba(255,255,255,0.03);
     border: 1px solid var(--border);
@@ -923,6 +898,74 @@
     {id:"jogging", name:"Jogging", category:"AGI", type:"minutes"},
   ];
 
+  // ---------- effort model ----------
+  // XP is scored by how much load you actually moved, expressed as a fraction of your own
+  // bodyweight, so difficulty is measured rather than assumed. A rep of an exercise that
+  // moves 100% of your bodyweight is worth more than one that moves 45%, and adding external
+  // weight raises the ratio linearly — 10 reps at 100 lbs is exactly twice 10 reps at 50 lbs.
+  // Time-based cardio can't be scored by load, so it uses METs (metabolic equivalents), the
+  // standard intensity measure: jogging at ~7 METs outpaces walking at ~3.5 per minute.
+  const XP_MODEL_VERSION = 2;
+  const DEFAULT_BODYWEIGHT = 175; // lbs — overridden in Settings
+  // Calibration constants, tuned so a typical session lands near the old flat-rate XP totals.
+  const XP_K = { reps: 2.0, time: 0.7, met: 0.45 };
+  // Fraction of bodyweight moved per rep (or supported, for holds).
+  const DEFAULT_LOAD_FRACTION = {
+    pushups:0.64, pullups:1.0, dips:0.95, rows:0.55,
+    squats:0.45, lunges:0.5, burpees:0.7, mtnclimbers:0.35,
+    plank:0.55, handstand:1.0, legraises:0.4, situps:0.35,
+  };
+  const FALLBACK_LOAD_FRACTION = { reps:0.5, time:0.5 };
+  const MISSING_WEIGHT_FRACTION = 0.25; // used when a loaded lift is logged with no weight entered
+  const DEFAULT_MET = { jogging:7 };
+  const FALLBACK_MET = 4.5;
+
+  function bodyweightLbs(){
+    const b = state && state.bodyweight;
+    return (typeof b === "number" && b > 0) ? b : DEFAULT_BODYWEIGHT;
+  }
+  // Per-exercise load fraction: user override, then the default table, then a by-type fallback.
+  // Accepts entries from old logs too, since those carry id and type.
+  function loadFractionFor(ex){
+    const custom = state && state.exerciseLoads && state.exerciseLoads[ex.id];
+    if(typeof custom === "number" && custom >= 0) return custom;
+    if(DEFAULT_LOAD_FRACTION[ex.id] != null) return DEFAULT_LOAD_FRACTION[ex.id];
+    // A ⚖ weight-tracked exercise the System doesn't recognise is assumed to be an external-load
+    // lift (a curl, a press) where your body isn't the resistance — so the bar alone is the load,
+    // and doubling it doubles the XP. Override the % if it's a loaded bodyweight movement.
+    if(state && state.exerciseWeights && state.exerciseWeights[ex.id]) return 0;
+    return FALLBACK_LOAD_FRACTION[ex.type] != null ? FALLBACK_LOAD_FRACTION[ex.type] : 0.5;
+  }
+  function metFor(ex){
+    const custom = state && state.exerciseMets && state.exerciseMets[ex.id];
+    if(typeof custom === "number" && custom > 0) return custom;
+    if(DEFAULT_MET[ex.id] != null) return DEFAULT_MET[ex.id];
+    return FALLBACK_MET;
+  }
+  // XP for one set. `weight` is the external load in lbs for that set, if any.
+  function setXp(ex, amount, weight){
+    if(!amount || amount <= 0) return 0;
+    if(ex.type === "minutes") return amount * metFor(ex) * XP_K.met;
+    const bw = bodyweightLbs();
+    const ext = (typeof weight === "number" && weight > 0) ? weight : 0;
+    let ratio = (loadFractionFor(ex) * bw + ext) / bw;
+    // An external-load lift logged without a weight would otherwise score zero. It falls back to a
+    // deliberately conservative rate: low enough that entering the real number always pays better
+    // than leaving it blank, so the model never rewards under-logging.
+    if(ratio <= 0) ratio = MISSING_WEIGHT_FRACTION;
+    return amount * ratio * (ex.type === "time" ? XP_K.time : XP_K.reps);
+  }
+  // XP for a whole exercise entry — sets and their per-set weights, rounded once at the end.
+  function entryXp(ex, sets, weights){
+    let total = 0;
+    (sets||[]).forEach((s,i)=>{ total += setXp(ex, s, weights && weights[i]); });
+    return Math.round(total);
+  }
+  // Effective XP per unit shown in the UI, at the exercise's unweighted baseline.
+  function baseRateFor(ex){
+    return setXp(ex, 1, null);
+  }
+
   const CATEGORY_LABEL = { STR:"Strength — Push, Pull, Press", AGI:"Agility — Speed & Power", VIT:"Vitality — Endurance & Core" };
   const RANK_COLORS = { E:"#adb9de", D:"#4fc3f7", C:"#34d399", B:"#c0afff", A:"#ffa37e", S:"#f6c453" };
 
@@ -956,133 +999,13 @@
     const entry = log.entries.find(e=>e.id===exId);
     return entry ? entry.sets.reduce((a,c)=>a+c,0) : 0;
   }
-  // ---------- progressive overload ----------
-  // When an exercise's gate-scaled daily goal has been cleared in each of its last
-  // OVERLOAD_CLEARS_NEEDED sessions (a "session" = a logged day featuring that exercise),
-  // the System suggests raising its base (E-Gate) goal by ~10%. Evidence must be recent:
-  // all qualifying sessions within OVERLOAD_LOOKBACK_DAYS, the newest within
-  // OVERLOAD_RECENT_DAYS. Accepting stamps sinceDate so only sessions logged *after* the
-  // raise count toward the next suggestion (prevents chain-raising off the same clears).
-  // Dismissing snoozes that exercise for OVERLOAD_SNOOZE_DAYS.
-  const OVERLOAD_CLEARS_NEEDED = 3;
-  const OVERLOAD_LOOKBACK_DAYS = 21;
-  const OVERLOAD_RECENT_DAYS = 7;
-  const OVERLOAD_SNOOZE_DAYS = 7;
-  const OVERLOAD_MAX_SHOWN = 2;
-
-  function dayTotalFor(log, exId){
-    const entry = (log.entries||[]).find(e=>e.id===exId);
-    return entry ? entry.sets.reduce((a,c)=>a+c,0) : 0;
-  }
-  // ~10% bump on the base goal, with a sensible minimum step per unit type.
-  function suggestedBaseGoal(ex){
-    const base = baseGoalFor(ex);
-    const minStep = ex.type==="time" ? 5 : 2; // seconds get bigger steps; reps/minutes +2 min
-    return Math.max(base + minStep, Math.ceil(base * 11 / 10)); // integer math avoids 50*1.1=55.000...004 → 56
-  }
-  function computeOverloadSuggestions(){
-    const today = todayStr();
-    const activeGate = state.gateRank || rankFor(state.level);
-    const ov = state.overload || {};
-    const sortedLogs = (state.logs||[]).slice().sort((a,b)=> a.date<b.date?1:-1); // newest first
-    const suggestions = [];
-    visibleExercises().forEach(ex=>{
-      const o = ov[ex.id] || {};
-      if(o.snoozedUntil && today < o.snoozedUntil) return;
-      const goal = gateScaledGoal(ex, activeGate);
-      // Most recent sessions featuring this exercise, newest first, bounded by
-      // the lookback window and any accept-stamp.
-      const sessions = [];
-      for(const log of sortedLogs){
-        if(daysBetween(log.date, today) > OVERLOAD_LOOKBACK_DAYS) break;
-        if(o.sinceDate && log.date <= o.sinceDate) break;
-        const total = dayTotalFor(log, ex.id);
-        if(total > 0){
-          sessions.push({date:log.date, total});
-          if(sessions.length === OVERLOAD_CLEARS_NEEDED) break;
-        }
-      }
-      if(sessions.length < OVERLOAD_CLEARS_NEEDED) return;
-      if(daysBetween(sessions[0].date, today) > OVERLOAD_RECENT_DAYS) return;
-      if(!sessions.every(s=> s.total >= goal)) return;
-      const newBase = suggestedBaseGoal(ex);
-      suggestions.push({ ex, currentBase: baseGoalFor(ex), newBase, currentScaled: goal, lastClearDate: sessions[0].date, gate: activeGate });
-    });
-    suggestions.sort((a,b)=> a.lastClearDate < b.lastClearDate ? 1 : -1);
-    return suggestions.slice(0, OVERLOAD_MAX_SHOWN);
-  }
-  function acceptOverload(exId){
-    const ex = allExercises().find(e=>e.id===exId);
-    if(!ex) return;
-    const newBase = suggestedBaseGoal(ex);
-    state.dailyGoals = state.dailyGoals || {};
-    state.dailyGoals[exId] = newBase;
-    state.overload = state.overload || {};
-    state.overload[exId] = Object.assign({}, state.overload[exId], { sinceDate: todayStr(), snoozedUntil: null });
-    saveState();
-    render();
-  }
-  function snoozeOverload(exId){
-    state.overload = state.overload || {};
-    state.overload[exId] = Object.assign({}, state.overload[exId], { snoozedUntil: addDays(todayStr(), OVERLOAD_SNOOZE_DAYS) });
-    saveState();
-    render();
-  }
-
-  // ---------- personal records ----------
-  // PRs are fully derived from state.logs — nothing stored — so they always reflect
-  // current history: removing or backdating a day auto-corrects them (unlike achievements
-  // and boss kills, which are honors and never revoked). Two records per exercise:
-  //   bestSet — largest single set ever logged (raw reps/seconds/minutes; weight ignored in v1)
-  //   bestDay — largest single-day cumulative total
-  // Ties keep the earliest date (a record stands until strictly beaten).
-  function unitShort(ex){ return ex.type==="time" ? "sec" : ex.type==="minutes" ? "min" : "reps"; }
-  function personalRecordsFor(exId, beforeDate){
-    let bestSet = null, bestDay = null;
-    (state.logs||[]).slice().sort((a,b)=> a.date<b.date?-1:1).forEach(log=>{
-      if(beforeDate && log.date >= beforeDate) return;
-      const entry = (log.entries||[]).find(e=>e.id===exId);
-      if(!entry) return;
-      const dayTotal = entry.sets.reduce((a,c)=>a+c,0);
-      const maxSet = entry.sets.reduce((a,c)=>Math.max(a,c),0);
-      if(dayTotal > 0 && (!bestDay || dayTotal > bestDay.value)) bestDay = {value:dayTotal, date:log.date};
-      if(maxSet > 0 && (!bestSet || maxSet > bestSet.value)) bestSet = {value:maxSet, date:log.date};
-    });
-    return (bestSet || bestDay) ? {bestSet, bestDay} : null;
-  }
-  // Diffs prior records against the just-merged state for the given exercise ids.
-  // priorMap: {exId: records|null} captured BEFORE the merge (so old values are accurate,
-  // including anything logged earlier the same day). Celebration is gated on the exercise
-  // having history on an EARLIER day than targetDate — the first-ever session sets the
-  // baseline silently instead of trumpeting trivial "records".
-  function detectNewPRs(exIds, priorMap, targetDate){
-    const newPRs = [];
-    exIds.forEach(id=>{
-      const ex = allExercises().find(e=>e.id===id);
-      if(!ex) return;
-      const hadPriorDay = !!personalRecordsFor(id, targetDate);
-      if(!hadPriorDay) return;
-      const prior = priorMap[id];
-      const now = personalRecordsFor(id);
-      if(!now) return;
-      const unit = unitShort(ex);
-      if(now.bestSet && prior && prior.bestSet && now.bestSet.value > prior.bestSet.value){
-        newPRs.push({name:ex.name, kind:"set", label:"best set", old:prior.bestSet.value, value:now.bestSet.value, unit});
-      }
-      if(now.bestDay && prior && prior.bestDay && now.bestDay.value > prior.bestDay.value){
-        newPRs.push({name:ex.name, kind:"day", label:"best day", old:prior.bestDay.value, value:now.bestDay.value, unit});
-      }
-    });
-    return newPRs;
-  }
-
   const DEFAULT_ROSTER = { 0:"REST", 1:"STR", 2:"AGI", 3:"VIT", 4:"FULL", 5:"STR", 6:"AGI" };
   const WEEKDAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
   const INFO_CONTENT = {
-    level: { title:"LEVEL", text:"Every rep, second held, or minute logged earns XP. Fill the XP bar to level up. XP needed for the next level = round(55 × level^1.55), so each level takes progressively more than the last." },
+    level: { title:"LEVEL", text:"Every rep, second held, or minute logged earns XP, scaled by how hard it actually was. Fill the XP bar to level up. XP needed for the next level = round(55 × level^1.55), so each level takes progressively more than the last." },
     rank: { title:"RANK", text:"Rank is just a badge tied to your level, not a separate track: E (1–9), D (10–19), C (20–29), B (30–39), A (40–49), S (50+). Leveling up is what moves your rank." },
-    xp: { title:"XP", text:"Base XP per set: 1 XP/rep, 0.4 XP/second held (planks, holds), 3 XP/minute of cardio. Your current Hunt Streak bonus (up to +25%) is added on top of every quest's XP. Total fills the bar toward your next level; leftover carries into the new bar after a level-up." },
+    xp: { title:"XP", text:"XP measures load moved, not volume logged. Each rep scores against the share of your bodyweight the movement carries — a pull-up moves ~100%, a push-up ~64%, a squat ~45% — and any weight you log on a set is added straight on top, so 10 reps at 100 lbs earns exactly double 10 reps at 50 lbs. Holds work the same way per second. Cardio is scored by METs (intensity per minute) rather than flat time, so jogging outearns walking minute for minute. Set your bodyweight in Settings to calibrate the whole scale, and adjust an exercise's load in Manage Exercises if the default misjudges how hard it is for you. Your current Hunt Streak bonus (up to +25%) is added on top of every quest's XP. Total fills the bar toward your next level; leftover carries into the new bar after a level-up." },
     str: { title:"STR", text:"Counts distinct Strength exercises you've logged — 1 point per exercise per day (2 different STR moves in one day = 2 points). Tier I: 0–100. Tier II: 100–1000, progress carries over. Tier MAX once you pass 1000, no further cap." },
     agi: { title:"AGI", text:"Counts distinct Agility exercises you've logged — 1 point per exercise per day (2 different AGI moves in one day = 2 points). Tier I: 0–100. Tier II: 100–1000, progress carries over. Tier MAX once you pass 1000, no further cap." },
     vit: { title:"VIT", text:"Counts distinct Vitality exercises you've logged — 1 point per exercise per day (2 different VIT moves in one day = 2 points). Tier I: 0–100. Tier II: 100–1000, progress carries over. Tier MAX once you pass 1000, no further cap." },
@@ -1090,7 +1013,6 @@
     penalty: { title:"PENALTY QUEST", text:"When a streak of 3+ days breaks past your grace day, the System offers one same-day trial: clear all three listed exercises at 1.5× their gate-scaled daily goals before midnight. Succeed and your full streak is restored (plus today) — with its XP bonus applying immediately. Fail and the trial silently expires; your streak stays broken but nothing else is lost. The offer appears at most once per 14 days." },
     gate: { title:"GATE RANK", text:"Scales your Daily Goals on the Job Board, like gate ranks in the show. Each exercise has a base goal (your E-Gate baseline — customizable via the ⚙ icon on the Freelance Quest panel); higher gates multiply it — D is 1.25×, C is 1.5×, up to 2.5× at S-Gate. Goals are cumulative for the day — every set you log counts toward them, and the board tracks your progress live. Gate Rank defaults to your Hunter Rank but you can raise or lower it any time." },
     boss: { title:"WEEKLY BOSS", text:"A boss spawns every Monday with HP set to 15% above your average weekly XP from the last 3 weeks (with a minimum floor based on your Gate Rank, locked at spawn). Every XP you earn Monday–Sunday deals that much damage — streak bonuses included. Deplete its HP before the week ends to slay it and claim a bounty worth 20% of its HP. If it survives, it escapes — no penalty, just a mark in your Boss Log. Slain bosses stay slain, even if you later remove logged days." },
-    overload: { title:"SYSTEM ADVISORY", text:"Progressive overload — the actual principle behind getting stronger. When you clear an exercise's gate-scaled Daily Goal in each of its last 3 sessions (with the most recent inside the past week), the System suggests raising its base goal by ~10%. Accept to write the new baseline instantly (the Job Board re-scales it to your Gate Rank), or choose Not Yet to snooze that exercise's suggestion for 7 days. After accepting, the System waits for 3 fresh clears at the new level before advising again — no chain-raising in one sitting." },
     freelance: { title:"FREELANCE QUEST", text:"Your main workout logging area. Pick an exercise from the dropdown, enter reps/seconds/minutes (leave blank to use your Daily Goal), and hit Add Set — repeat for each set. The builder shows everything queued up; hit Complete Quest to log it all.\n\n⚙ Manage Exercises (gear icon): add custom exercises, rename existing ones, set Daily Goals per exercise, enable ⚖ weight tracking, or hide exercises you don't use.\n\nTemplates: select a saved template from the dropdown and either ⚡ Log it instantly (with confirmation) or ↗ Load it into the builder to tweak before completing. Create and manage templates via 📋 Manage Templates.\n\n💾 Save as Template (appears after logging): captures today's quest as a reusable template.\n\n📅 Log a Past Day: backdate a workout for any day in the last 14 days — XP is base-only (no streak bonus), but the entry fills in your streak and counts toward the Weekly Boss." },
   };
   function infoBtn(key){
@@ -1145,7 +1067,7 @@
 
   // ---------- state helpers ----------
   function defaultState(){
-    return { level:1, xp:0, streak:0, lastLogDate:null, logs:[], customExercises:[], roster: Object.assign({}, DEFAULT_ROSTER), board: null, grace: { lastUsedDate: null }, gateRank: null, hunterName:"", hunterId:null, hunterAvatar:null, hiddenExerciseIds:[], dailyGoals:{}, achievements:{}, equippedTitle:null, counters:{ goalsCleared:0, sGateGoalClears:0, bossesSlain:0, penaltiesCleared:0, templatesSaved:0, quickLogs:0 }, weeklyBoss:null, bossHistory:[], penalty:{ lastOfferedDate:null, active:null }, templates:[], overload:{} };
+    return { level:1, xp:0, streak:0, lastLogDate:null, logs:[], customExercises:[], roster: Object.assign({}, DEFAULT_ROSTER), board: null, grace: { lastUsedDate: null }, gateRank: null, hunterName:"", hunterId:null, hunterAvatar:null, hiddenExerciseIds:[], dailyGoals:{}, achievements:{}, equippedTitle:null, counters:{ goalsCleared:0, sGateGoalClears:0, bossesSlain:0, penaltiesCleared:0, templatesSaved:0, quickLogs:0 }, weeklyBoss:null, bossHistory:[], penalty:{ lastOfferedDate:null, active:null }, templates:[] };
   }
   function allExercises(){
     const overrides = state.exerciseOverrides || {};
@@ -1653,8 +1575,7 @@
     const oldTiers = {STR:tierInfo(oldPoints.STR).tier, AGI:tierInfo(oldPoints.AGI).tier, VIT:tierInfo(oldPoints.VIT).tier};
     let baseXp = 0;
     const entries = builder.map(b=>{
-      const sum = b.sets.reduce((a,c)=>a+c,0);
-      const xp = b.type === "time" ? Math.round(sum*0.4) : b.type === "minutes" ? Math.round(sum*3) : Math.round(sum);
+      const xp = entryXp(b, b.sets, b.weights);
       baseXp += xp;
       return {id:b.id, name:b.name, category:b.category, type:b.type, sets:b.sets.slice(), weights:(b.weights||[]).slice(), xp};
     });
@@ -1662,9 +1583,6 @@
     // Capture pre-merge totals so we can detect daily-goal crossings below
     const prevTotals = {};
     builder.forEach(b=>{ prevTotals[b.id] = todayTotalFor(b.id); });
-    // Capture pre-merge personal records so new-PR detection has accurate old values
-    const priorPRs = {};
-    builder.forEach(b=>{ if(!(b.id in priorPRs)) priorPRs[b.id] = personalRecordsFor(b.id); });
 
     let log = state.logs.find(l=>l.date===today);
     if(!log){ log = {date:today, entries:[], totalXp:0}; state.logs.push(log); }
@@ -1734,12 +1652,11 @@
     const tierUps = ["STR","AGI","VIT"].filter(cat=> tierInfo(newPoints[cat]).tier > oldTiers[cat])
       .map(cat=> ({cat, label: tierInfo(newPoints[cat]).label}));
     const newAchievements = checkAchievements();
-    const newPRs = detectNewPRs(uniqueIds, priorPRs, today);
     builder = [];
     saveState();
     render();
     if(result.leveledUp){ triggerLevelUpFlash(); }
-    showSystemWindow(baseXp, result.leveledUp, result.rankedUp, tierUps, bonusPct, bonusXp, usedGraceToday, newAchievements, bossInfo, clearedPenalty ? state.streak : null, newPRs);
+    showSystemWindow(baseXp, result.leveledUp, result.rankedUp, tierUps, bonusPct, bonusXp, usedGraceToday, newAchievements, bossInfo, clearedPenalty ? state.streak : null);
   }
 
   // ---------- backdated logging ----------
@@ -1761,14 +1678,10 @@
 
     let baseXp = 0;
     const entries = entriesBuilder.map(b=>{
-      const sum = b.sets.reduce((a,c)=>a+c,0);
-      const xp = b.type === "time" ? Math.round(sum*0.4) : b.type === "minutes" ? Math.round(sum*3) : Math.round(sum);
+      const xp = entryXp(b, b.sets, b.weights);
       baseXp += xp;
       return {id:b.id, name:b.name, category:b.category, type:b.type, sets:b.sets.slice(), weights:(b.weights||[]).slice(), xp};
     });
-    // Capture pre-merge personal records for new-PR detection
-    const priorPRs = {};
-    entriesBuilder.forEach(b=>{ if(!(b.id in priorPRs)) priorPRs[b.id] = personalRecordsFor(b.id); });
 
     let log = state.logs.find(l=>l.date===targetDate);
     if(!log){ log = {date:targetDate, entries:[], totalXp:0}; state.logs.push(log); }
@@ -1809,11 +1722,10 @@
     const tierUps = ["STR","AGI","VIT"].filter(cat=> tierInfo(newPoints[cat]).tier > oldTiers[cat])
       .map(cat=> ({cat, label: tierInfo(newPoints[cat]).label}));
     const newAchievements = checkAchievements();
-    const newPRs = detectNewPRs(Array.from(new Set(entriesBuilder.map(b=>b.id))), priorPRs, targetDate);
     saveState();
     render();
     if(leveledUp){ triggerLevelUpFlash(); }
-    return { targetDate, baseXp, bounty, tierUps, newAchievements, bossInfo, leveledUp, rankedUp, newLevel: state.level, newPRs };
+    return { targetDate, baseXp, bounty, tierUps, newAchievements, bossInfo, leveledUp, rankedUp, newLevel: state.level };
   }
 
   // ---------- render ----------
@@ -1883,8 +1795,6 @@
       </div>
 
       ${renderPenaltyQuest()}
-
-      ${renderOverloadAdvisory()}
 
       <div class="panel" style="margin-top:18px;">
         <div class="eyebrow"><span class="dot"></span>GUILD JOB BOARD</div>
@@ -2008,12 +1918,23 @@
           const defaultGoal = (GATE_TARGETS[ex.type] || GATE_TARGETS.reps).E;
           const hasWeight = !!weights[ex.id];
           const isCustom = ex.id.startsWith("c_");
+          const isCardio = ex.type === "minutes";
+          const customLoadPct = (state.exerciseLoads && typeof state.exerciseLoads[ex.id] === "number")
+            ? Math.round(state.exerciseLoads[ex.id] * 100) : "";
+          const customMet = (state.exerciseMets && typeof state.exerciseMets[ex.id] === "number")
+            ? state.exerciseMets[ex.id] : "";
+          const rateLabel = `Currently ${Math.round(baseRateFor(ex)*100)/100} XP per ${unit === "sec" ? "second" : unit === "min" ? "minute" : "rep"}`;
           return `<div class="ex-mgr-row ${isHidden?"is-hidden":""}">
             <span class="ex-mgr-name">${escapeHtml(ex.name)}</span>
             <span class="ex-mgr-actions">
               <button class="btn small ghost ex-mgr-edit-btn" data-edit-exercise="${ex.id}" title="Edit exercise">✎</button>
               <input type="number" min="1" class="ex-mgr-goal-input" data-goal-exercise="${ex.id}" placeholder="${defaultGoal}" value="${customGoal || ""}" title="Daily goal (${unit})" />
               <span class="ex-mgr-unit">${unit}/day</span>
+              ${isCardio
+                ? `<input type="number" min="1" max="25" step="0.5" class="ex-mgr-load-input" data-load-exercise="${ex.id}" data-load-kind="met" placeholder="${Math.round(metFor(ex)*10)/10}" value="${customMet || ""}" title="Intensity in METs — walking ≈ 3.5, disc golf ≈ 4.8, jogging ≈ 7, hard running ≈ 11" />
+                   <span class="ex-mgr-unit" title="${rateLabel}">METs</span>`
+                : `<input type="number" min="0" max="300" step="1" class="ex-mgr-load-input" data-load-exercise="${ex.id}" data-load-kind="bw" placeholder="${Math.round(loadFractionFor(ex)*100)}" value="${customLoadPct || ""}" title="Percent of your bodyweight moved per ${unit === "sec" ? "second held" : "rep"} — this is what sets the exercise's XP rate" />
+                   <span class="ex-mgr-unit" title="${rateLabel}">% BW</span>`}
               <label class="ex-mgr-weight-toggle" title="Track weight for this exercise">
                 <input type="checkbox" data-weight-toggle="${ex.id}" ${hasWeight ? "checked" : ""} /> <span class="ex-mgr-weight-label">⚖</span>
               </label>
@@ -2023,7 +1944,7 @@
         }).join("")}
       </div>`;
     }).join("");
-    return rows + `<div class="ex-mgr-note">✎ Edit = rename or change category. ⚖ Weight = track load (lbs/kg) when logging sets. Daily Goal is your E-Gate baseline — the Job Board scales it up with your Gate Rank. Leave blank to use the default. Removed exercises hide from the dropdown/Job Board but past logs are untouched.</div>`;
+    return rows + `<div class="ex-mgr-note"><b>% BW</b> is what drives XP: the share of your bodyweight the movement actually moves (push-up ≈ 64%, squat ≈ 45%, pull-up ≈ 100%). Any weight you log for a set is added on top, so 10 reps at 100 lbs earns exactly double 10 reps at 50 lbs. Cardio uses <b>METs</b> instead — intensity per minute, where walking ≈ 3.5 and jogging ≈ 7. Hover a rate to see the XP it produces, and raise a number if an exercise feels harder for you than the default assumes. Set your bodyweight in ⚙ Settings. ✎ Edit = rename or change category. ⚖ Weight = track load (lbs/kg) when logging sets. Daily Goal is your E-Gate baseline — the Job Board scales it up with your Gate Rank. Leave blank to use the default. Removed exercises hide from the dropdown/Job Board but past logs are untouched.</div>`;
   }
 
   function setDailyGoal(id, value){
@@ -2031,6 +1952,24 @@
     const num = parseInt(value, 10);
     if(!num || num <= 0){ delete state.dailyGoals[id]; }
     else{ state.dailyGoals[id] = num; }
+    saveState();
+  }
+
+  // Load overrides only affect XP earned from here on — past logs keep the score they were
+  // given, so tweaking a number never silently rewrites your history. Use "Recalculate XP"
+  // in Settings if you do want the change applied backward.
+  function setLoadFraction(id, value){
+    state.exerciseLoads = state.exerciseLoads || {};
+    const num = parseFloat(value);
+    if(isNaN(num) || num < 0){ delete state.exerciseLoads[id]; }
+    else{ state.exerciseLoads[id] = Math.min(3, num / 100); }
+    saveState();
+  }
+  function setMet(id, value){
+    state.exerciseMets = state.exerciseMets || {};
+    const num = parseFloat(value);
+    if(isNaN(num) || num <= 0){ delete state.exerciseMets[id]; }
+    else{ state.exerciseMets[id] = Math.min(25, num); }
     saveState();
   }
 
@@ -2556,40 +2495,6 @@
     refreshOverlay();
   }
 
-  function renderOverloadAdvisory(){
-    const suggestions = computeOverloadSuggestions();
-    if(suggestions.length === 0) return "";
-    const rows = suggestions.map(s=>{
-      const unit = s.ex.type==="time" ? "sec" : s.ex.type==="minutes" ? "min" : "reps";
-      const catColor = CONTRACT_COLORS[s.ex.category];
-      const newScaled = (function(){
-        const table = GATE_TARGETS[s.ex.type] || GATE_TARGETS.reps;
-        const mult = (table[s.gate] || table.E) / table.E;
-        return Math.max(1, Math.round(s.newBase * mult));
-      })();
-      const scaledNote = s.gate !== "E" ? `<small>Base goal ${s.currentBase} → ${s.newBase} ${unit} · shown at your ${s.gate}-Gate scaling</small>` : "";
-      const shownFrom = s.gate !== "E" ? s.currentScaled : s.currentBase;
-      const shownTo = s.gate !== "E" ? newScaled : s.newBase;
-      return `
-        <div class="overload-row">
-          <span class="overload-ex-name"><span style="color:${catColor};">${s.ex.category}</span> ${escapeHtml(s.ex.name)}</span>
-          <span class="overload-detail">Cleared ${OVERLOAD_CLEARS_NEEDED} hunts straight — raise daily goal <b>${shownFrom} → ${shownTo} ${unit}</b>?${scaledNote}</span>
-          <span class="overload-actions">
-            <button class="btn small overload-accept-btn" data-overload-accept="${s.ex.id}">⬆ Raise Goal</button>
-            <button class="btn small ghost" data-overload-snooze="${s.ex.id}" title="Snooze this suggestion for ${OVERLOAD_SNOOZE_DAYS} days">Not Yet</button>
-          </span>
-        </div>
-      `;
-    }).join("");
-    return `
-      <div class="panel overload-panel" style="margin-top:18px;">
-        <div class="eyebrow overload-eyebrow"><span class="dot overload-dot"></span>SYSTEM ADVISORY${infoBtn("overload")}</div>
-        <p class="overload-intro">「 Your limits are not where you left them. 」 The System has observed sustained mastery and recommends progressive overload:</p>
-        <div class="overload-rows">${rows}</div>
-      </div>
-    `;
-  }
-
   function renderPenaltyQuest(){
     const p = state.penalty && state.penalty.active;
     if(!p || p.date !== todayStr()) return "";
@@ -2843,17 +2748,7 @@
     const labels = coords.filter((_,i)=> i===0 || i===coords.length-1 || i===Math.floor(coords.length/2))
       .map(c=>`<text x="${c.x}" y="${h-4}" fill="var(--text-dim2)" font-size="9" text-anchor="middle" font-family="JetBrains Mono, monospace">${fmtDate(c.date)}</text>`).join("");
 
-    const prs = personalRecordsFor(selectedChartId);
-    const dots = coords.map(c=>{
-      const isRecordDay = prs && prs.bestDay && c.date === prs.bestDay.date && c.value === prs.bestDay.value;
-      return `<circle cx="${c.x}" cy="${c.y}" r="${isRecordDay ? 4 : 3}" fill="${isRecordDay ? "var(--gold)" : "#4fc3f7"}"${isRecordDay ? ' stroke="rgba(246,196,83,0.4)" stroke-width="3"' : ""}><title>${fmtDate(c.date)}: ${c.value}${isRecordDay ? " 🏅 Record day" : ""}</title></circle>`;
-    }).join("");
-    const unit = unitShort(ex);
-    const prStrip = prs ? `
-      <div class="pr-strip">
-        ${prs.bestSet ? `<span>🏅 Best set: <b>${prs.bestSet.value} ${unit}</b> <span class="pr-date">(${fmtDate(prs.bestSet.date)})</span></span>` : ""}
-        ${prs.bestDay ? `<span>🏅 Best day: <b>${prs.bestDay.value} ${unit}</b> <span class="pr-date">(${fmtDate(prs.bestDay.date)})</span></span>` : ""}
-      </div>` : "";
+    const dots = coords.map(c=>`<circle cx="${c.x}" cy="${c.y}" r="3" fill="#4fc3f7"><title>${fmtDate(c.date)}: ${c.value}</title></circle>`).join("");
 
     return `
       <div class="chart-caption">Y-axis: total ${unitLabel.toLowerCase()} of ${ex.name} logged per day &nbsp;·&nbsp; X-axis: date (last ${recent.length} logged session${recent.length===1?"":"s"})</div>
@@ -2871,7 +2766,6 @@
         ${dots}
         ${labels}
       </svg>
-      ${prStrip}
     `;
   }
 
@@ -2968,6 +2862,23 @@
       state.grace.lastUsedDate = graceLastUsed;
     }
     checkStreakBreak();
+  }
+
+  // Rescores every logged entry under the current effort model and rebuilds level/XP from it.
+  // Each day's streak bonus is preserved proportionally: the old ratio of totalXp to the sum of
+  // its entries is re-applied, so a day logged on a +12% streak keeps that +12% after rescoring.
+  function recomputeAllLogXp(){
+    (state.logs||[]).forEach(log=>{
+      const oldBase = (log.entries||[]).reduce((a,e)=> a + (e.xp||0), 0);
+      const bonusFactor = oldBase > 0 ? (log.totalXp||oldBase) / oldBase : 1;
+      let newBase = 0;
+      (log.entries||[]).forEach(e=>{
+        e.xp = entryXp(e, e.sets, e.weights);
+        newBase += e.xp;
+      });
+      log.totalXp = Math.round(newBase * bonusFactor);
+    });
+    recomputeFromLogs();
   }
 
   function removeLogEntry(date){
@@ -3485,6 +3396,14 @@
           showEditExerciseOverlay(btn.dataset.editExercise);
         });
       });
+      overlay.querySelectorAll("[data-load-exercise]").forEach(input=>{
+        input.addEventListener("change", ()=>{
+          if(input.dataset.loadKind === "met"){ setMet(input.dataset.loadExercise, input.value); }
+          else{ setLoadFraction(input.dataset.loadExercise, input.value); }
+          refreshList();
+          render();
+        });
+      });
       overlay.querySelectorAll("[data-weight-toggle]").forEach(input=>{
         input.addEventListener("change", ()=>{
           toggleExerciseWeight(input.dataset.weightToggle, input.checked);
@@ -3602,6 +3521,13 @@
           <div id="avatarStatusMsg" class="avatar-status-msg"></div>
           <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin:16px 0 6px;">HUNTER NAME</label>
           <input type="text" id="settingsHunterNameInput" maxlength="24" placeholder="Enter Hunter Name" value="${escapeHtml(state.hunterName||"")}" class="settings-input" />
+          <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin:18px 0 6px;">BODYWEIGHT (LBS)</label>
+          <input type="number" id="settingsBodyweightInput" min="50" max="600" step="1" placeholder="${DEFAULT_BODYWEIGHT}" value="${state.bodyweight || ""}" class="settings-input" />
+          <div style="font-size:12px; color:var(--text-dim2); line-height:1.4; margin-top:6px;">The System scores every rep by the load you moved, measured against your own bodyweight — so this is what calibrates XP for push-ups, squats and every other bodyweight movement. External weight you log on a set is added on top of it.</div>
+          <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin:18px 0 6px;">XP RECALCULATION</label>
+          <button class="btn small ghost" id="recalcXpBtn" type="button">↻ Rescore All History</button>
+          <div id="recalcStatusMsg" class="avatar-status-msg"></div>
+          <div style="font-size:12px; color:var(--text-dim2); line-height:1.4; margin-top:4px;">Re-scores every quest you've ever logged under your current bodyweight and exercise load values, then rebuilds your Level from the result. Your level can move in either direction. Streak bonuses are preserved.</div>
           <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin:18px 0 6px;">DATA BACKUP</label>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="btn small" id="exportDataBtn" type="button">⬇ Export Backup</button>
@@ -3675,6 +3601,21 @@
       fileInput.value = "";
     });
 
+    const bwInput = overlay.querySelector("#settingsBodyweightInput");
+    const recalcStatus = overlay.querySelector("#recalcStatusMsg");
+    overlay.querySelector("#recalcXpBtn").addEventListener("click", ()=>{
+      // Commit whatever's typed in the bodyweight box first, so the rescore uses it.
+      applyBodyweight();
+      const before = state.level;
+      recomputeAllLogXp();
+      saveState();
+      render();
+      const after = state.level;
+      recalcStatus.textContent = after === before
+        ? `Rescored. Level holds at ${after}.`
+        : `Rescored. Level ${before} → ${after}.`;
+    });
+
     const backupStatus = overlay.querySelector("#backupStatusMsg");
     overlay.querySelector("#exportDataBtn").addEventListener("click", ()=>{
       const ok = exportData();
@@ -3696,8 +3637,14 @@
       overlay.classList.remove("show");
       setTimeout(()=>overlay.remove(), 250);
     }
+    function applyBodyweight(){
+      const bw = parseFloat(bwInput.value);
+      if(isNaN(bw) || bw <= 0){ delete state.bodyweight; }
+      else{ state.bodyweight = Math.min(600, Math.max(50, bw)); }
+    }
     function save(){
       state.hunterName = (input.value||"").trim();
+      applyBodyweight();
       saveState();
       close();
       render();
@@ -3767,10 +3714,9 @@
     overlay.addEventListener("click", (e)=>{ if(e.target===overlay) close(); });
   }
 
-  function showSystemWindow(xpGained, leveledUp, rankedUp, tierUps, bonusPct, bonusXp, usedGrace, newAchievements, bossInfo, penaltyRestoredTo, newPRs){
+  function showSystemWindow(xpGained, leveledUp, rankedUp, tierUps, bonusPct, bonusXp, usedGrace, newAchievements, bossInfo, penaltyRestoredTo){
     tierUps = tierUps || [];
     newAchievements = newAchievements || [];
-    newPRs = newPRs || [];
     const overlay = document.createElement("div");
     overlay.className = "overlay";
     overlay.innerHTML = `
@@ -3786,7 +3732,6 @@
         ${leveledUp ? `<div class="line">You have reached <b>Level ${state.level}</b>.</div>` : ""}
         ${rankedUp ? `<div class="rankup">RANK UP → ${rankedUp}-RANK HUNTER</div>` : ""}
         ${tierUps.map(t=>`<div class="rankup" style="color:var(--blue);text-shadow:0 0 12px rgba(79,195,247,0.5);">${t.cat} TIER UP → ${t.label}</div>`).join("")}
-        ${newPRs.map(p=>`<div class="rankup pr-banner">🏅 NEW RECORD — ${escapeHtml(p.name)}<span class="pr-detail-line">${p.label}: ${p.old} → ${p.value} ${p.unit}</span></div>`).join("")}
         ${newAchievements.map(a=>`<div class="rankup achievement-unlock">🏆 ACHIEVEMENT — ${a.name}<span class="achievement-title-line">Title unlocked: "${a.title}"</span></div>`).join("")}
         <button class="btn primary" id="closeSysWindow">Continue</button>
       </div>
@@ -3815,7 +3760,6 @@
         ${result.leveledUp ? `<div class="line">You have reached <b>Level ${result.newLevel}</b>.</div>` : ""}
         ${result.rankedUp ? `<div class="rankup">RANK UP → ${result.rankedUp}-RANK HUNTER</div>` : ""}
         ${result.tierUps.map(t=>`<div class="rankup" style="color:var(--blue);text-shadow:0 0 12px rgba(79,195,247,0.5);">${t.cat} TIER UP → ${t.label}</div>`).join("")}
-        ${(result.newPRs||[]).map(p=>`<div class="rankup pr-banner">🏅 NEW RECORD — ${escapeHtml(p.name)}<span class="pr-detail-line">${p.label}: ${p.old} → ${p.value} ${p.unit}</span></div>`).join("")}
         ${result.newAchievements.map(a=>`<div class="rankup achievement-unlock">🏆 ACHIEVEMENT — ${a.name}<span class="achievement-title-line">Title unlocked: "${a.title}"</span></div>`).join("")}
         <div class="line" style="color:var(--text-dim2); font-size:11px; margin-top:10px;">Your streak has been recalculated to account for this entry.</div>
         <button class="btn primary" id="closeBackdateResult">Continue</button>
@@ -4000,14 +3944,6 @@
       btn.addEventListener("click", ()=>{ setGateRank(btn.dataset.gateRank); });
     });
 
-    document.querySelectorAll("[data-overload-accept]").forEach(btn=>{
-      btn.addEventListener("click", ()=>{ acceptOverload(btn.dataset.overloadAccept); });
-    });
-
-    document.querySelectorAll("[data-overload-snooze]").forEach(btn=>{
-      btn.addEventListener("click", ()=>{ snoozeOverload(btn.dataset.overloadSnooze); });
-    });
-
     document.querySelectorAll("[data-accept]").forEach(btn=>{
       btn.addEventListener("click", ()=>{ acceptContract(btn.dataset.accept); });
     });
@@ -4108,9 +4044,47 @@
     }
   }
 
+  // Runs once when an older save first opens under the effort model. Every past quest gets
+  // rescored the same way a new one would be, so a single number means the same thing across
+  // your whole history rather than meaning "flat volume" before a certain date and "load moved"
+  // after it. Returns the before/after levels when there was history to rescore.
+  function migrateXpModel(){
+    if(state.xpModelVersion === XP_MODEL_VERSION) return null;
+    const hadHistory = (state.logs||[]).length > 0;
+    const before = state.level;
+    if(hadHistory){ recomputeAllLogXp(); }
+    state.xpModelVersion = XP_MODEL_VERSION;
+    saveState();
+    return hadHistory ? { before, after: state.level } : null;
+  }
+
+  function showNoticeOverlay(tagText, title, bodyHtml){
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `
+      <div class="sys-window">
+        <div class="tag">◆ ${tagText} ◆</div>
+        <h3>${title}</h3>
+        <div style="text-align:left; font-size:13px; line-height:1.6;">${bodyHtml}</div>
+        <div style="display:flex; justify-content:center; margin-top:20px;">
+          <button class="btn primary" id="closeNoticeBtn">Understood</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(()=>overlay.classList.add("show"));
+    function close(){
+      overlay.classList.remove("show");
+      setTimeout(()=>overlay.remove(), 250);
+    }
+    overlay.querySelector("#closeNoticeBtn").addEventListener("click", close);
+    overlay.addEventListener("click", (e)=>{ if(e.target===overlay) close(); });
+  }
+
   // ---------- init ----------
   async function init(){
     state = await loadState();
+    const migration = migrateXpModel();
     checkStreakBreak();
     // Weekly boss reconcile: spawn/rollover, then silently process a kill that
     // imported or backdated data may have already earned (bounty still awarded).
@@ -4124,6 +4098,15 @@
     const settingsBtn = document.getElementById("settingsBtn");
     if(settingsBtn){ settingsBtn.addEventListener("click", showSettingsOverlay); }
     render();
+    if(migration){
+      const moved = migration.after === migration.before
+        ? `Your Level held at <b>${migration.after}</b>.`
+        : `Your Level moved from <b>${migration.before}</b> to <b>${migration.after}</b>.`;
+      showNoticeOverlay("SYSTEM RECALIBRATION", "EFFORT REWEIGHTED",
+        `<p style="margin:0 0 10px;">The System no longer counts reps — it weighs the load behind them. Every rep is now scored against your own bodyweight, and any weight you log is added on top, so ten reps at 100 lbs is worth exactly twice ten reps at 50 lbs. Cardio is scored by intensity per minute instead of flat time.</p>
+         <p style="margin:0 0 10px;">Your entire hunt history has been rescored under the new measure. ${moved}</p>
+         <p style="margin:0;">Set your bodyweight in <b>⚙ Settings</b> to calibrate it properly — the default assumes ${DEFAULT_BODYWEIGHT} lbs. Per-exercise load values live in <b>⚙ Manage Exercises</b>.</p>`);
+    }
   }
   init();
 })();

@@ -36,7 +36,11 @@ Neither mode is "better" — just pick based on what you want: Claude sync if yo
 ## How It Works
 
 ### Level, XP & Rank
-- Every set you log earns XP: **1 XP per rep**, **0.4 XP per second held** (planks, holds), **3 XP per minute** of cardio.
+- Every set you log earns XP based on **how much load you actually moved**, not raw volume. Each rep is scored against the share of your bodyweight the movement carries — a pull-up moves ~100%, a push-up ~64%, a squat ~45% — and any weight you log on a set is added straight on top. Holds work the same way per second.
+- Because load is additive, **10 reps at 100 lbs is worth exactly double 10 reps at 50 lbs** on a pure external-load lift, and a +45 lb weighted pull-up beats a bodyweight one by the same proportion the load went up.
+- Cardio can't be scored by load, so it uses **METs** (metabolic equivalents) — intensity per minute. Walking ≈ 3.5, disc golf ≈ 4.8, jogging ≈ 7, hard running ≈ 11. Minute for minute, jogging outearns walking.
+- Set your **bodyweight** in ⚙ Settings — it calibrates the entire scale. Per-exercise **% BW** and **MET** values live in ⚙ Manage Exercises if a default misjudges how hard something is for you.
+- **↻ Rescore All History** in Settings re-runs the whole log under your current numbers and rebuilds your Level from the result (streak bonuses preserved).
 - XP needed for your next level increases each time (roughly `55 × level^1.55`), so leveling slows down as you go.
 - **Rank** is just a badge tied to your level — not a separate grind:
 
@@ -64,13 +68,6 @@ Neither mode is "better" — just pick based on what you want: Claude sync if yo
 - Goals are **cumulative for the day** — every set across every quest you log counts toward them. Hit your goal and it's cleared for the day.
 - **Gate Rank** (E through S, selectable on the Job Board) scales your goals up, the same way gates have difficulty ranks in the show — D-Gate is 1.25× your baseline, C is 1.5×, climbing to **2.5× at S-Gate**. It defaults to your Hunter Rank but you can raise or lower it any time to push yourself harder (or ease off).
 - **Tip:** when adding a set, leave the number field blank and hit Add Set — it automatically fills in your Daily Goal for that exercise, so you don't have to type it out if that's exactly what you're aiming for.
-
-### System Advisory (Progressive Overload)
-- Clear an exercise's gate-scaled Daily Goal in **each of its last 3 sessions** (with the most recent inside the past week), and a gold **SYSTEM ADVISORY** panel appears suggesting you raise that exercise's goal by **~10%** — progressive overload, the actual training principle the Daily Goal system is built on.
-- **⬆ Raise Goal** accepts instantly: your base (E-Gate) goal is updated, and the Job Board re-scales it to your current Gate Rank from that moment on.
-- **Not Yet** snoozes the suggestion for that exercise for 7 days — it'll return if you're still clearing the goal.
-- After accepting, the System waits for **3 fresh clears at the new level** before advising again, so you can't chain-raise a goal off the same streak of clears.
-- At most 2 advisories show at a time (most recently earned first), and hidden exercises are never suggested.
 
 ### Guild Job Board
 - Each day posts a set of suggested "contracts" (exercises) based on a weekly roster you can customize: Strength day, Agility day, Vitality day, Full Hunt (mix of all three), or Guild Holiday (rest day). Edit the roster from "⚙ Edit guild roster" on the board.
@@ -134,15 +131,8 @@ For workouts you repeat — Push Day, a park circuit, whatever your schedule loo
 
 ### Dashboard
 - **Consistency (heatmap):** shows the last 12 weeks of activity, darker = more XP that day.
-- **Progress (chart):** pick any exercise you've logged to see your daily totals (reps/seconds/minutes) over your last 14 sessions. Below the chart, a 🏅 strip shows that exercise's **Personal Records** — best single set and best single-day total, with dates — and the record day gets a gold dot on the chart itself when it's in view.
+- **Progress (chart):** pick any exercise you've logged to see your daily totals (reps/seconds/minutes) over your last 14 sessions.
 - **Quest History:** your last 15 logged days, most recent first, including weight notation where applicable — each one has a ✕ to remove it if you logged something by mistake. Removing a day automatically recalculates your Level, XP, and streak so nothing stays inflated. (Achievement and boss-kill honors are never revoked by this, even retroactively.)
-
-### Personal Records
-- Every exercise tracks two records automatically: **best single set** (your biggest set ever) and **best day** (your biggest single-day total across all sets).
-- Beat one and the quest-complete System Window celebrates it: *"🏅 NEW RECORD — Push-Ups, best set: 20 → 25 reps."* Backdated entries that turn out to beat your records get celebrated too.
-- Your **first-ever session** of an exercise quietly sets the baseline — records only get announced once there's real history to beat (a prior session on an earlier day).
-- Records are **computed from your actual log history**, not stored separately — so unlike achievements and boss kills, if you delete the day a record was set, the record rolls back to your true best. What the 🏅 strip shows is always what your history supports.
-- v1 tracks raw volume only (reps/seconds/minutes) — weight is displayed in history but doesn't factor into records yet.
 
 ### Hunter Profile & Guild Member Card
 - Tap the **⚙ gear icon** (top-right corner of the app) to set your Hunter Name, upload an avatar photo, and manage your data backup.
@@ -158,7 +148,7 @@ For workouts you repeat — Push Day, a park circuit, whatever your schedule loo
 ---
 
 ## A Few Tips
-- Info bubbles (small "i" icons) sit next to Level, Rank, XP, STR/AGI/VIT, Hunt Streak, Gate Rank, Weekly Boss, Penalty Quest, System Advisory, and Freelance Quest — tap any of them for a quick explanation of exactly how that number or mechanic works.
+- Info bubbles (small "i" icons) sit next to Level, Rank, XP, STR/AGI/VIT, Hunt Streak, Gate Rank, Weekly Boss, Penalty Quest, and Freelance Quest — tap any of them for a quick explanation of exactly how that number or mechanic works.
 - Leave the reps/seconds/minutes field blank when adding a set to auto-fill your Daily Goal for that exercise — handy when you're hitting your target exactly.
 - Your streak, XP, stats, achievements, templates, and boss records are permanent and never wiped unless you use Reset.
 - If you get an updated version of this file later, opening it again won't erase your existing progress — your data lives in storage separate from the file itself (tied to your account in Claude, or to your browser in standalone mode). Exporting a backup beforehand is always a safe habit when updating.
