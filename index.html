@@ -28,6 +28,25 @@
   }
 
   *{ box-sizing: border-box; }
+
+  /* Scrollbars, everywhere. The browser default is a bright chunk of OS chrome sitting inside
+     a dark HUD, so it gets the same angular blue treatment as the rest of the System. */
+  *{ scrollbar-width: thin; scrollbar-color: rgba(79,195,247,0.45) rgba(0,0,0,0.30); }
+  *::-webkit-scrollbar{ width:9px; height:9px; }
+  *::-webkit-scrollbar-track{
+    background: rgba(0,0,0,0.30);
+    border-left: 1px solid rgba(94,169,255,0.10);
+    border-top: 1px solid rgba(94,169,255,0.10);
+  }
+  *::-webkit-scrollbar-thumb{
+    background: linear-gradient(180deg, rgba(79,195,247,0.50), rgba(43,111,150,0.50));
+    border: 1px solid rgba(94,169,255,0.30);
+  }
+  *::-webkit-scrollbar-thumb:hover{
+    background: linear-gradient(180deg, rgba(79,195,247,0.80), rgba(43,111,150,0.70));
+    border-color: var(--border-strong);
+  }
+  *::-webkit-scrollbar-corner{ background: transparent; }
   html,body{ height:100%; }
   body{
     margin:0;
@@ -624,26 +643,136 @@
   .exercise-manager{ display:none; flex-direction:column; gap:14px; margin-bottom:14px; padding:12px; background: rgba(255,255,255,0.02); border:1px dashed var(--border); }
   .exercise-manager.open{ display:flex; }
   .ex-mgr-cat{ font-size:11px; letter-spacing:1.5px; color: var(--text-dim2); margin-bottom:6px; }
-  .ex-mgr-row{ display:flex; align-items:center; padding:5px 0; font-size:13px; gap:8px; flex-wrap:wrap; }
+  .ex-mgr-section{
+    display:block; font-size:11px; color:var(--text-dim2);
+    letter-spacing:1px; margin-bottom:8px;
+  }
+  /* A fixed 2-column grid keeps the add form from re-flowing into a different shape
+     every time a field's content changes width. */
+  .ex-mgr-add{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .ex-mgr-add #mgrCustomName{ grid-column: 1 / -1; margin-bottom:0; }
+  .ex-mgr-add select{ min-width:0; width:100%; flex:none; font-size:13px; padding:9px 30px 9px 10px; }
+  .ex-mgr-add #mgrCustomPattern, .ex-mgr-add #mgrCustomIntensity{ grid-column: 1 / -1; }
+  .ex-mgr-add .btn{ grid-column: 1 / -1; margin-top:0; }
+  .ex-mgr-hint{ font-size:12px; color:var(--text-dim2); line-height:1.45; margin-bottom:18px; }
+  .ex-mgr-list{
+    max-height:340px;
+    overflow-y:auto;
+    overflow-x:hidden;
+    padding-right:6px;
+  }
+  .ex-mgr-group{ margin-bottom:10px; }
+
+  /* Grid, not flex. The action cluster gets its own column track, so it is not part of the
+     control line's flow and no combination of font width, zoom or locale can push it onto
+     another line or out of alignment. The content column is minmax(0,1fr): it absorbs every
+     bit of slack and shrinks to nothing before it ever affects the column beside it. */
+  .ex-mgr-row{
+    display:grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    column-gap:10px; row-gap:6px;
+    align-items:center;
+    padding:10px 0; font-size:13px;
+    border-bottom:1px solid rgba(94,169,255,0.10);
+  }
+  .ex-mgr-head{ grid-column:1; grid-row:1; }
+  .ex-mgr-controls{ grid-column:1; grid-row:2; }
+  /* align-self:start, not center: when the control line wraps on a narrow screen the row grows
+     taller, and centring would float the cluster against the whole stacked block instead of
+     the first control line. Anchored to the top, it stays level with the reps box always. */
+  .ex-mgr-tools{ grid-column:2; grid-row:2; align-self:start; }
+  .ex-mgr-row:last-child{ border-bottom:none; }
+  .ex-mgr-row.is-hidden{ opacity:0.55; }
   .ex-mgr-row.is-hidden .ex-mgr-name{ color: var(--text-dim2); text-decoration: line-through; }
-  .ex-mgr-row .btn{ margin-top:0; }
-  .ex-mgr-note{ font-size:12px; color: var(--text-dim2); line-height:1.4; }
-  .ex-mgr-name{ flex:1; min-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .ex-mgr-actions{ display:flex; align-items:center; gap:6px; flex-shrink:0; flex-wrap:wrap; }
-  .ex-mgr-edit-btn{ padding:4px 8px !important; font-size:13px !important; }
+  /* Both lines are nowrap. Exactly one element on each is allowed to shrink — the name up top,
+     the pattern picker below — so no combination of font widths can push anything onto a second
+     line. Everything else is fixed-width or sized to its own content. */
+  .ex-mgr-head{ display:flex; align-items:center; gap:10px; flex-wrap:nowrap; min-width:0; }
+  .ex-mgr-name{ flex:1 1 0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+  .ex-mgr-controls{ display:flex; align-items:center; gap:6px; min-width:0; flex-wrap:wrap; row-gap:6px; }
+  .ex-mgr-note{ font-size:12px; color: var(--text-dim2); line-height:1.4; margin-top:10px; }
+
+  /* One tight cluster of identical buttons. All three are <button> elements so nothing can
+     differ in metrics between them, and the emoji glyphs carry U+FE0E to force text
+     presentation — otherwise the browser substitutes a colour emoji at its own size. */
+  .ex-mgr-tools{
+    display:flex; align-items:stretch;
+    height:28px;                 /* pinned: nothing inside may dictate the row's height */
+    flex:0 0 auto;
+  }
+  .ex-mgr-icon{
+    flex:0 0 auto;
+    width:30px; height:28px;
+    min-width:0; min-height:0;   /* min-*:auto lets a child's min-content inflate a flex item */
+    display:inline-flex; align-items:center; justify-content:center;
+    background: rgba(255,255,255,0.03);
+    border:1px solid var(--border);
+    border-right-width:0;
+    color: var(--text-dim2);
+    line-height:0; cursor:pointer;
+    padding:0; margin:0;
+    opacity:0.75;
+    transition: color .15s, border-color .15s, background .15s, opacity .15s;
+  }
+  .ex-mgr-row:hover .ex-mgr-icon{ opacity:1; }
+  .ex-mgr-icon svg{ display:block; width:16px; height:16px; }
+  .ex-mgr-tools .ex-mgr-icon:last-child{ border-right-width:1px; }
+  .ex-mgr-icon:hover{ opacity:1; color: var(--blue); border-color: var(--border-strong); background: rgba(79,195,247,0.10); }
+  .ex-mgr-icon:hover + .ex-mgr-icon{ border-left-color: var(--border-strong); }
+  .ex-mgr-icon.is-on{ opacity:1; color: var(--gold); border-color: rgba(246,196,83,0.55); background: rgba(246,196,83,0.12); }
+  .ex-mgr-icon.is-on:hover{ color: var(--gold); background: rgba(246,196,83,0.20); }
+  .ex-mgr-icon.is-remove:hover{ color: var(--red); border-color: rgba(250,162,162,0.55); background: rgba(250,162,162,0.10); }
+  .ex-mgr-icon.is-restore{ color: var(--green); border-color: rgba(52,211,153,0.45); }
+
   .ex-mgr-goal-input, .ex-mgr-load-input{
-    width:58px;
+    width:52px; height:28px; flex:0 1 auto; min-width:34px;
+    min-height:0;   /* as with the icons: min-height:auto lets content inflate the line */
     background: rgba(255,255,255,0.03);
     border: 1px solid var(--border);
     color: var(--text);
     padding: 5px 6px;
     font-size: 12px;
     font-family:'JetBrains Mono', monospace;
+    -moz-appearance: textfield;
   }
-  .ex-mgr-unit{ font-size:11px; color: var(--text-dim2); }
-  .ex-mgr-weight-toggle{ display:flex; align-items:center; gap:3px; cursor:pointer; flex-shrink:0; }
-  .ex-mgr-weight-toggle input{ cursor:pointer; }
-  .ex-mgr-weight-label{ font-size:13px; color: var(--text-dim2); }
+  .ex-mgr-goal-input::-webkit-outer-spin-button, .ex-mgr-goal-input::-webkit-inner-spin-button,
+  .ex-mgr-load-input::-webkit-outer-spin-button, .ex-mgr-load-input::-webkit-inner-spin-button{
+    -webkit-appearance:none; margin:0;
+  }
+  .ex-mgr-load-input.is-auto{ color: var(--text-dim2); border-style:dashed; }
+  .ex-mgr-load-input.is-auto::placeholder{ color: var(--blue-dim); }
+  .ex-mgr-unit{ font-size:11px; color: var(--text-dim2); flex:0 0 auto; white-space:nowrap; }
+  .ex-mgr-working{ display:flex; align-items:center; gap:4px; flex:0 1 auto; min-width:0; }
+  /* Overrides the global select rule, which is sized for the quest builder, not for this row. */
+  .ex-mgr-load-select{
+    flex:0 1 auto;
+    min-width:72px;
+    width:auto;
+    height:28px;
+    min-height:0;   /* same reason — the option text must not dictate the line's height */
+    max-width:100%;
+    font-size:11px;
+    padding:0 26px 0 8px;
+    background-position: calc(100% - 13px) center, calc(100% - 8px) center;
+    font-weight:500;
+    font-family:'JetBrains Mono', monospace;
+  }
+  .ex-mgr-rate{
+    font-size:11px;
+    color: var(--blue);
+    font-family:'JetBrains Mono', monospace;
+    white-space:nowrap;
+    flex:0 1 auto;
+    min-width:0;
+    overflow:hidden; text-overflow:ellipsis;
+    padding-left:2px;
+  }
+  .ex-mgr-head{ min-height:18px; }
   .weight-input{ width:70px; }
   .weight-input.hidden{ display:none; }
 
@@ -822,6 +951,9 @@
   }
 
   @media (max-width: 560px){
+    .sys-window{ padding: 28px 18px; }
+    .ex-mgr-add{ grid-template-columns: 1fr; }
+    .ex-mgr-load-select{ flex:1 1 120px; }
     .status-grid{ grid-template-columns: auto 1fr; }
     .streak-block{ grid-column: 1 / -1; display:flex; align-items:center; gap:10px; justify-content:flex-start; }
     .substats{ grid-template-columns: 1fr; }
@@ -912,7 +1044,7 @@
   // System can't know leverage, so you tell it your WORKING LOAD for that movement — the weight
   // where a set is a real fight — and every set is scored as a fraction of it. Doubling the
   // weight still exactly doubles the XP; the working load just sets what "hard" means here.
-  const XP_MODEL_VERSION = 3;
+  const XP_MODEL_VERSION = 4;
   const DEFAULT_BODYWEIGHT = 175; // lbs — overridden in Settings
   // Calibration constants, tuned so a typical session lands near the old flat-rate XP totals.
   const XP_K = { reps: 2.0, time: 0.7, met: 0.45 };
@@ -928,6 +1060,33 @@
   const MISSING_WEIGHT_FRACTION = 0.25; // used when a loaded lift is logged with no weight entered
   const DEFAULT_MET = { jogging:7 };
   const FALLBACK_MET = 4.5;
+
+  // What the System actually asks a user. "What fraction of your bodyweight does this carry?"
+  // is a biomechanics question nobody can answer; "what does this movement resist?" is one
+  // anyone can answer by looking at the movement. Each answer maps to a load fraction.
+  const MOVEMENT_PATTERNS = [
+    { id:"whole",    label:"Whole body",        fraction:1.0,  hint:"Pull-ups, chin-ups, muscle-ups — you're lifting all of you." },
+    { id:"most",     label:"Most of your body", fraction:0.65, hint:"Push-ups, dips, inverted rows — most of you, braced against the ground or a bar." },
+    { id:"lower",    label:"Lower body",        fraction:0.45, hint:"Squats, lunges, step-ups — your legs move your torso." },
+    { id:"core",     label:"Core only",         fraction:0.35, hint:"Sit-ups, leg raises, planks — a limb or your midsection, not your whole mass." },
+    { id:"external", label:"Only the weight",   fraction:0,    hint:"Curls, flies, presses — your body isn't the resistance, the weight is. Scored against your working load instead." },
+  ];
+  const CARDIO_INTENSITIES = [
+    { id:"easy",     label:"Easy",     met:3.0,  hint:"Walking, gentle cycling — you could hold a conversation the whole time." },
+    { id:"moderate", label:"Moderate", met:5.0,  hint:"Brisk walking, disc golf, easy swimming — breathing harder, still comfortable." },
+    { id:"vigorous", label:"Vigorous", met:7.5,  hint:"Jogging, cycling with effort — talking comes in short sentences." },
+    { id:"allout",   label:"All-out",  met:11.0, hint:"Sprint intervals, hard running — you can't sustain this for long." },
+  ];
+  // The stored value is always a number, so a hand-tuned figure survives. These find the option
+  // that best describes it, so the picker can show something sensible without overwriting it.
+  function nearestPattern(fraction){
+    if(fraction <= 0) return MOVEMENT_PATTERNS[MOVEMENT_PATTERNS.length-1];
+    return MOVEMENT_PATTERNS.filter(p=>p.fraction > 0)
+      .reduce((best,p)=> Math.abs(p.fraction-fraction) < Math.abs(best.fraction-fraction) ? p : best);
+  }
+  function nearestIntensity(met){
+    return CARDIO_INTENSITIES.reduce((best,c)=> Math.abs(c.met-met) < Math.abs(best.met-met) ? c : best);
+  }
 
   function bodyweightLbs(){
     const b = state && state.bodyweight;
@@ -951,11 +1110,43 @@
     if(DEFAULT_MET[ex.id] != null) return DEFAULT_MET[ex.id];
     return FALLBACK_MET;
   }
+  // Your working load is normally derived rather than asked for: the median of the three
+  // heaviest sets you've logged for that movement. The median resists a single ego lift
+  // skewing the whole scale, and because the figure rises as you get stronger, your older
+  // lighter sets are worth proportionally less over time — progressive overload is what earns
+  // XP, not repetition at a weight that's stopped challenging you. A manual entry overrides it.
+  let _derivedLoadCache = null;
+  function invalidateDerivedLoads(){ _derivedLoadCache = null; }
+  function derivedWorkingLoads(){
+    if(_derivedLoadCache) return _derivedLoadCache;
+    const byId = {};
+    (state.logs||[]).forEach(log=>{
+      (log.entries||[]).forEach(e=>{
+        (e.weights||[]).forEach(w=>{
+          if(typeof w === "number" && w > 0){ (byId[e.id] = byId[e.id] || []).push(w); }
+        });
+      });
+    });
+    const out = {};
+    Object.keys(byId).forEach(id=>{
+      const top = byId[id].sort((a,b)=>b-a).slice(0,3);
+      out[id] = top.length >= 3 ? top[1]
+              : top.length === 2 ? (top[0]+top[1])/2
+              : top[0];
+    });
+    _derivedLoadCache = out;
+    return out;
+  }
+  function derivedWorkingLoadFor(ex){
+    const v = derivedWorkingLoads()[ex.id];
+    return (typeof v === "number" && v > 0) ? v : null;
+  }
   // Your working load for an external-load lift, in whatever units you log (per-dumbbell or
   // total — it cancels out of the ratio, so it only has to be consistent with itself).
   function workingLoadFor(ex){
     const wl = state && state.exerciseWorkingLoads && state.exerciseWorkingLoads[ex.id];
-    return (typeof wl === "number" && wl > 0) ? wl : null;
+    if(typeof wl === "number" && wl > 0) return wl;
+    return derivedWorkingLoadFor(ex);
   }
   // XP for one set. `weight` is the external load for that set, if any.
   function setXp(ex, amount, weight){
@@ -1523,6 +1714,9 @@
   }
 
   function saveState(){
+    // Any state change may have added a set or altered an override, so the derived working
+    // loads are recomputed on next use rather than trusted from before the change.
+    invalidateDerivedLoads();
     savePending = true;
     return processSaveQueue();
   }
@@ -1934,6 +2128,20 @@
     }).join("");
   }
 
+  // Icons are inline SVG rather than characters. A glyph like the scales or the pencil falls
+  // back to whatever font on the system has it, which drags in that font's metrics — that was
+  // silently inflating the button cluster's min-content height and pushing it out of line with
+  // the rest of the row. SVG has fixed geometry and one consistent stroke weight.
+  const ICONS = {
+    edit: '<path d="M11.1 2.4a1.3 1.3 0 0 1 1.9 0l.6.6a1.3 1.3 0 0 1 0 1.9L6.4 11.9l-3 .8.8-3z"/>',
+    weight: '<path d="M2.5 6.3v3.4M5 4.6v6.8M11 4.6v6.8M13.5 6.3v3.4M5 8h6"/>',
+    remove: '<path d="M4.2 4.2l7.6 7.6M11.8 4.2l-7.6 7.6"/>',
+    restore: '<path d="M13 8a5 5 0 1 1-1.6-3.7M13 2.6V5h-2.4"/>',
+  };
+  function icon(name){
+    return `<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${ICONS[name]}</svg>`;
+  }
+
   function renderExerciseManager(){
     const hidden = state.hiddenExerciseIds || [];
     const weights = state.exerciseWeights || {};
@@ -1951,37 +2159,50 @@
           const hasWeight = !!weights[ex.id];
           const isCustom = ex.id.startsWith("c_");
           const isCardio = ex.type === "minutes";
-          const customLoadPct = (state.exerciseLoads && typeof state.exerciseLoads[ex.id] === "number")
-            ? Math.round(state.exerciseLoads[ex.id] * 100) : "";
-          const customMet = (state.exerciseMets && typeof state.exerciseMets[ex.id] === "number")
-            ? state.exerciseMets[ex.id] : "";
-          const customWorking = workingLoadFor(ex) || "";
-          const rateLabel = `Currently ${Math.round(baseRateFor(ex)*100)/100} XP per ${unit === "sec" ? "second" : unit === "min" ? "minute" : "rep"}`;
+          const manualWorking = (state.exerciseWorkingLoads && state.exerciseWorkingLoads[ex.id]) || "";
+          const customWorking = manualWorking;
+          const derivedWL = derivedWorkingLoadFor(ex);
+          const currentPattern = nearestPattern(loadFractionFor(ex));
+          const currentIntensity = nearestIntensity(metFor(ex));
+          const isExternal = !isCardio && loadFractionFor(ex) <= 0;
+          const rateUnit = unit === "sec" ? "sec" : unit === "min" ? "min" : "rep";
+          const rateNum = Math.round(baseRateFor(ex)*100)/100;
+          const rateText = `${rateNum} XP/${rateUnit}`;
+          const rateLabel = isExternal
+            ? `${rateNum} XP per rep at your working load. For scale, 100 squats = ${entryXp({id:"squats",type:"reps"},[100],[])} XP.`
+            : `${rateNum} XP per ${unit === "sec" ? "second" : unit === "min" ? "minute" : "rep"}. For scale, 100 squats = ${entryXp({id:"squats",type:"reps"},[100],[])} XP.`;
           return `<div class="ex-mgr-row ${isHidden?"is-hidden":""}">
-            <span class="ex-mgr-name">${escapeHtml(ex.name)}</span>
-            <span class="ex-mgr-actions">
-              <button class="btn small ghost ex-mgr-edit-btn" data-edit-exercise="${ex.id}" title="Edit exercise">✎</button>
+            <div class="ex-mgr-head">
+              <span class="ex-mgr-name" title="${escapeHtml(ex.name)}">${escapeHtml(ex.name)}</span>
+            </div>
+            <div class="ex-mgr-controls">
               <input type="number" min="1" class="ex-mgr-goal-input" data-goal-exercise="${ex.id}" placeholder="${defaultGoal}" value="${customGoal || ""}" title="Daily goal (${unit})" />
               <span class="ex-mgr-unit">${unit}/day</span>
               ${isCardio
-                ? `<input type="number" min="1" max="25" step="0.5" class="ex-mgr-load-input" data-load-exercise="${ex.id}" data-load-kind="met" placeholder="${Math.round(metFor(ex)*10)/10}" value="${customMet || ""}" title="Intensity in METs — walking ≈ 3.5, disc golf ≈ 4.8, jogging ≈ 7, hard running ≈ 11" />
-                   <span class="ex-mgr-unit" title="${rateLabel}">METs</span>`
-                : `<input type="number" min="0" max="300" step="1" class="ex-mgr-load-input" data-load-exercise="${ex.id}" data-load-kind="bw" placeholder="${Math.round(loadFractionFor(ex)*100)}" value="${customLoadPct || ""}" title="Percent of your bodyweight moved per ${unit === "sec" ? "second held" : "rep"} — this is what sets the exercise's XP rate" />
-                   <span class="ex-mgr-unit" title="${rateLabel}">% BW</span>`}
-              ${(!isCardio && hasWeight)
-                ? `<input type="number" min="1" max="1000" step="1" class="ex-mgr-load-input" data-load-exercise="${ex.id}" data-load-kind="working" placeholder="—" value="${customWorking || ""}" title="Your working load — the weight where a set of 10 is a real fight. Log it the same way you log your sets (per dumbbell or total). This is what makes the XP fair for movements where a light weight is still brutal." />
-                   <span class="ex-mgr-unit" title="${rateLabel}">hard @</span>`
+                ? `<select class="ex-mgr-load-select" data-load-exercise="${ex.id}" data-load-kind="met" title="How hard is this while you're doing it?">
+                     ${CARDIO_INTENSITIES.map(c=>`<option value="${c.id}" ${c.id===currentIntensity.id?"selected":""}>${c.label}</option>`).join("")}
+                   </select>`
+                : `<select class="ex-mgr-load-select" data-load-exercise="${ex.id}" data-load-kind="bw" title="What does this movement resist?">
+                     ${MOVEMENT_PATTERNS.map(p=>`<option value="${p.id}" ${p.id===currentPattern.id?"selected":""}>${p.label}</option>`).join("")}
+                   </select>`}
+              ${isExternal
+                ? `<span class="ex-mgr-working" title="Your working load — the weight at which a set of 10 is a real fight. Leave blank and the System derives it from the median of your three heaviest logged sets. Use the same units you log your sets in.">
+                     <span class="ex-mgr-unit">hard&nbsp;@</span>
+                     <input type="number" min="1" max="1000" step="1" class="ex-mgr-load-input ${customWorking?"":"is-auto"}" data-load-exercise="${ex.id}" data-load-kind="working" placeholder="${derivedWL ? Math.round(derivedWL*10)/10 : "?"}" value="${customWorking || ""}" />
+                   </span>`
                 : ""}
-              <label class="ex-mgr-weight-toggle" title="Track weight for this exercise">
-                <input type="checkbox" data-weight-toggle="${ex.id}" ${hasWeight ? "checked" : ""} /> <span class="ex-mgr-weight-label">⚖</span>
-              </label>
-              <button class="btn small ${isHidden?"":"ghost"}" data-toggle-exercise="${ex.id}">${isHidden?"Restore":"Remove"}</button>
+              <span class="ex-mgr-rate" title="${rateLabel}">${rateText}</span>
+            </div>
+            <span class="ex-mgr-tools">
+              <button type="button" class="ex-mgr-icon" data-edit-exercise="${ex.id}" title="Rename or change category" aria-label="Edit ${escapeHtml(ex.name)}">${icon("edit")}</button>
+              <button type="button" class="ex-mgr-icon ${hasWeight?"is-on":""}" data-weight-toggle="${ex.id}" aria-pressed="${hasWeight?"true":"false"}" title="${hasWeight?"Tracking the weight you lift — click to stop":"Track the weight you lift on this"}" aria-label="Toggle weight tracking for ${escapeHtml(ex.name)}">${icon("weight")}</button>
+              <button type="button" class="ex-mgr-icon ${isHidden?"is-restore":"is-remove"}" data-toggle-exercise="${ex.id}" title="${isHidden?"Restore to the Job Board":"Hide from the Job Board (past logs are kept)"}" aria-label="${isHidden?"Restore":"Remove"} ${escapeHtml(ex.name)}">${isHidden?icon("restore"):icon("remove")}</button>
             </span>
           </div>`;
         }).join("")}
       </div>`;
     }).join("");
-    return rows + `<div class="ex-mgr-note"><b>% BW</b> is what drives XP: the share of your bodyweight the movement actually moves (push-up ≈ 64%, squat ≈ 45%, pull-up ≈ 100%). Any weight you log for a set is added on top, so 10 reps at 100 lbs earns exactly double 10 reps at 50 lbs. Cardio uses <b>METs</b> instead — intensity per minute, where walking ≈ 3.5 and jogging ≈ 7. For ⚖ lifts where your body isn't the resistance (curls, flies, extensions), set <b>hard @</b> — the weight at which a set of 10 is a real fight. Those lifts are scored against that number instead of against your bodyweight, which is how a light dumbbell on a brutal movement stops being underpaid. Log it in the same units you log your sets — per dumbbell or total, it only has to match itself. Hover a rate to see the XP it produces, and raise a number if an exercise feels harder for you than the default assumes. Set your bodyweight in ⚙ Settings. ✎ Edit = rename or change category. ⚖ Weight = track load (lbs/kg) when logging sets. Daily Goal is your E-Gate baseline — the Job Board scales it up with your Gate Rank. Leave blank to use the default. Removed exercises hide from the dropdown/Job Board but past logs are untouched.</div>`;
+    return rows + `<div class="ex-mgr-note">The dropdown asks <b>what the movement resists</b> — that's what sets its XP rate, and the blue figure beside it is the rate you'll actually earn. Pick <b>Only the weight</b> for lifts where your body isn't the resistance (curls, flies, extensions); those are scored against your <b>working load</b> — the weight at which a set of 10 is a real fight — so a light dumbbell on a brutal movement stops being underpaid. Leave <b>hard @</b> blank and the System derives it from the median of your three heaviest logged sets, rising as you get stronger. Fill it in only to overrule that. Cardio asks how hard it feels instead. Set your bodyweight in ⚙ Settings — it calibrates everything. ✦ Rescore All History in Settings re-runs your whole log under the current numbers. The three buttons on each row rename it, toggle weight tracking, and hide it from the Job Board. Daily Goal is your E-Gate baseline — the Job Board scales it up with your Gate Rank. Leave blank to use the default. Removed exercises hide from the dropdown/Job Board but past logs are untouched.</div>`;
   }
 
   function setDailyGoal(id, value){
@@ -1995,18 +2216,19 @@
   // Load overrides only affect XP earned from here on — past logs keep the score they were
   // given, so tweaking a number never silently rewrites your history. Use "Recalculate XP"
   // in Settings if you do want the change applied backward.
-  function setLoadFraction(id, value){
+  // Takes a movement-pattern id from the picker and stores the load fraction behind it.
+  function setMovementPattern(id, patternId){
+    const pattern = MOVEMENT_PATTERNS.find(p=>p.id===patternId);
+    if(!pattern) return;
     state.exerciseLoads = state.exerciseLoads || {};
-    const num = parseFloat(value);
-    if(isNaN(num) || num < 0){ delete state.exerciseLoads[id]; }
-    else{ state.exerciseLoads[id] = Math.min(3, num / 100); }
+    state.exerciseLoads[id] = pattern.fraction;
     saveState();
   }
-  function setMet(id, value){
+  function setCardioIntensity(id, intensityId){
+    const intensity = CARDIO_INTENSITIES.find(c=>c.id===intensityId);
+    if(!intensity) return;
     state.exerciseMets = state.exerciseMets || {};
-    const num = parseFloat(value);
-    if(isNaN(num) || num <= 0){ delete state.exerciseMets[id]; }
-    else{ state.exerciseMets[id] = Math.min(25, num); }
+    state.exerciseMets[id] = intensity.met;
     saveState();
   }
 
@@ -2913,6 +3135,10 @@
   // Each day's streak bonus is preserved proportionally: the old ratio of totalXp to the sum of
   // its entries is re-applied, so a day logged on a +12% streak keeps that +12% after rescoring.
   function recomputeAllLogXp(){
+    // Weights don't change during a rescore, so the derived working loads are computed once
+    // up front and reused across every entry instead of rebuilt per set.
+    invalidateDerivedLoads();
+    derivedWorkingLoads();
     (state.logs||[]).forEach(log=>{
       const oldBase = (log.entries||[]).reduce((a,e)=> a + (e.xp||0), 0);
       const bonusFactor = oldBase > 0 ? (log.totalXp||oldBase) / oldBase : 1;
@@ -3388,13 +3614,13 @@
     const overlay = document.createElement("div");
     overlay.className = "overlay";
     overlay.innerHTML = `
-      <div class="sys-window card-window" style="max-width:520px;">
+      <div class="sys-window card-window" style="max-width:600px;">
         <div class="tag">◆ SETTINGS ◆</div>
         <h3>MANAGE EXERCISES</h3>
         <div style="text-align:left;">
-          <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin-bottom:8px;">ADD NEW EXERCISE</label>
-          <div class="builder-row" style="margin-bottom:18px;">
-            <input type="text" id="mgrCustomName" placeholder="Exercise name" class="settings-input" style="flex:2; min-width:120px;" />
+          <label class="ex-mgr-section">ADD NEW EXERCISE</label>
+          <div class="ex-mgr-add">
+            <input type="text" id="mgrCustomName" placeholder="Exercise name" class="settings-input" />
             <select id="mgrCustomCategory">
               <option value="STR">STR</option>
               <option value="AGI">AGI</option>
@@ -3405,10 +3631,17 @@
               <option value="time">seconds</option>
               <option value="minutes">minutes</option>
             </select>
+            <select id="mgrCustomPattern">
+              ${MOVEMENT_PATTERNS.map(p=>`<option value="${p.id}" ${p.id==="most"?"selected":""}>${p.label}</option>`).join("")}
+            </select>
+            <select id="mgrCustomIntensity" style="display:none;">
+              ${CARDIO_INTENSITIES.map(c=>`<option value="${c.id}" ${c.id==="moderate"?"selected":""}>${c.label}</option>`).join("")}
+            </select>
             <button class="btn small" id="mgrAddCustomBtn">Add</button>
           </div>
-          <label style="display:block; font-size:11px; color:var(--text-dim2); letter-spacing:1px; margin-bottom:8px;">EXISTING EXERCISES</label>
-          <div id="mgrExerciseList" style="max-height:280px; overflow-y:auto;">${renderExerciseManager()}</div>
+          <div id="mgrPatternHint" class="ex-mgr-hint"></div>
+          <label class="ex-mgr-section">EXISTING EXERCISES</label>
+          <div id="mgrExerciseList" class="ex-mgr-list">${renderExerciseManager()}</div>
         </div>
         <div style="display:flex; justify-content:center; margin-top:20px;">
           <button class="btn primary" id="closeMgrBtn">Done</button>
@@ -3441,25 +3674,59 @@
           showEditExerciseOverlay(btn.dataset.editExercise);
         });
       });
-      overlay.querySelectorAll("[data-load-exercise]").forEach(input=>{
+      overlay.querySelectorAll("select[data-load-exercise], input[data-load-exercise]").forEach(input=>{
         input.addEventListener("change", ()=>{
-          if(input.dataset.loadKind === "met"){ setMet(input.dataset.loadExercise, input.value); }
+          if(input.dataset.loadKind === "met"){ setCardioIntensity(input.dataset.loadExercise, input.value); }
           else if(input.dataset.loadKind === "working"){ setWorkingLoad(input.dataset.loadExercise, input.value); }
-          else{ setLoadFraction(input.dataset.loadExercise, input.value); }
+          else{ setMovementPattern(input.dataset.loadExercise, input.value); }
           refreshList();
           render();
         });
       });
-      overlay.querySelectorAll("[data-weight-toggle]").forEach(input=>{
-        input.addEventListener("change", ()=>{
-          toggleExerciseWeight(input.dataset.weightToggle, input.checked);
+      overlay.querySelectorAll("[data-weight-toggle]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          const id = btn.dataset.weightToggle;
+          toggleExerciseWeight(id, !(state.exerciseWeights && state.exerciseWeights[id]));
           refreshList();
+          render();
         });
       });
     }
     bindListButtons();
 
     const nameInput = overlay.querySelector("#mgrCustomName");
+    const typeSel = overlay.querySelector("#mgrCustomType");
+    const patternSel = overlay.querySelector("#mgrCustomPattern");
+    const intensitySel = overlay.querySelector("#mgrCustomIntensity");
+    const patternHint = overlay.querySelector("#mgrPatternHint");
+    // The picker shown depends on the type, and the hint explains the consequence of the choice
+    // before the exercise exists — so nobody has to guess what a setting will be worth.
+    function refreshPatternUI(){
+      const isCardio = typeSel.value === "minutes";
+      patternSel.style.display = isCardio ? "none" : "";
+      intensitySel.style.display = isCardio ? "" : "none";
+      const unit = typeSel.value === "time" ? "sec" : isCardio ? "min" : "rep";
+      let hint, rate;
+      if(isCardio){
+        const c = CARDIO_INTENSITIES.find(x=>x.id===intensitySel.value);
+        hint = c.hint;
+        rate = c.met * XP_K.met;
+      } else {
+        const p = MOVEMENT_PATTERNS.find(x=>x.id===patternSel.value);
+        hint = p.hint;
+        rate = p.fraction > 0
+          ? p.fraction * (typeSel.value === "time" ? XP_K.time : XP_K.reps)
+          : HARD_SET_EQUIVALENT * XP_K.reps;
+      }
+      const rateNote = (!isCardio && patternSel.value === "external")
+        ? `Worth <b>${Math.round(rate*100)/100} XP/rep</b> at your working load, scaling with the weight you log.`
+        : `Worth <b>${Math.round(rate*100)/100} XP/${unit}</b>.`;
+      patternHint.innerHTML = `${escapeHtml(hint)} ${rateNote} For scale, 100 squats = ${entryXp({id:"squats",type:"reps"},[100],[])} XP.`;
+    }
+    typeSel.addEventListener("change", refreshPatternUI);
+    patternSel.addEventListener("change", refreshPatternUI);
+    intensitySel.addEventListener("change", refreshPatternUI);
+    refreshPatternUI();
     overlay.querySelector("#mgrAddCustomBtn").addEventListener("click", ()=>{
       const name = nameInput.value.trim();
       if(!name){ nameInput.focus(); return; }
@@ -3467,8 +3734,18 @@
       const type = overlay.querySelector("#mgrCustomType").value;
       const id = "c_" + name.toLowerCase().replace(/[^a-z0-9]+/g,"-") + "_" + Date.now().toString(36);
       state.customExercises.push({id, name, category, type});
+      // Calibrate it immediately from the picker, so a new exercise is never scored by a guess.
+      if(type === "minutes"){
+        setCardioIntensity(id, overlay.querySelector("#mgrCustomIntensity").value);
+      } else {
+        const patternId = overlay.querySelector("#mgrCustomPattern").value;
+        setMovementPattern(id, patternId);
+        // "Only the weight" movements are meaningless without a logged weight, so turn on ⚖ for them.
+        if(patternId === "external"){ toggleExerciseWeight(id, true); }
+      }
       saveState();
       nameInput.value = "";
+      refreshPatternUI();
       refreshList();
       render();
     });
@@ -4099,33 +4376,13 @@
     if(state.xpModelVersion === XP_MODEL_VERSION) return null;
     const hadHistory = (state.logs||[]).length > 0;
     const before = state.level;
-    // v3: external-load lifts need a working load. Seed each one from the heaviest weight it
-    // appears with in your history — a defensible first guess that you then correct in
-    // Manage Exercises. Anything already set by hand is left alone.
-    state.exerciseWorkingLoads = state.exerciseWorkingLoads || {};
-    const seeded = [];
-    const heaviest = {};
-    (state.logs||[]).forEach(log=>{
-      (log.entries||[]).forEach(e=>{
-        (e.weights||[]).forEach(w=>{
-          if(typeof w === "number" && w > 0){ heaviest[e.id] = Math.max(heaviest[e.id]||0, w); }
-        });
-      });
-    });
-    allExercises().forEach(ex=>{
-      if(ex.type === "minutes") return;
-      if(!(state.exerciseWeights && state.exerciseWeights[ex.id])) return;
-      if(loadFractionFor(ex) > 0) return; // a loaded bodyweight movement scores against you, not a working load
-      if(state.exerciseWorkingLoads[ex.id] > 0) return;
-      if(heaviest[ex.id] > 0){
-        state.exerciseWorkingLoads[ex.id] = heaviest[ex.id];
-        seeded.push(ex.name);
-      }
-    });
+    // v4: working loads are derived from logged history rather than seeded once, so nothing is
+    // written here. Anything set by hand in an earlier version is left exactly as it is — a
+    // number you chose deliberately outranks anything the System can infer.
     if(hadHistory){ recomputeAllLogXp(); }
     state.xpModelVersion = XP_MODEL_VERSION;
     saveState();
-    return hadHistory ? { before, after: state.level, seeded } : null;
+    return hadHistory ? { before, after: state.level } : null;
   }
 
   function showNoticeOverlay(tagText, title, bodyHtml){
@@ -4172,12 +4429,11 @@
       const moved = migration.after === migration.before
         ? `Your Level held at <b>${migration.after}</b>.`
         : `Your Level moved from <b>${migration.before}</b> to <b>${migration.after}</b>.`;
-      const seededNote = (migration.seeded && migration.seeded.length)
-        ? `<p style="margin:0 0 10px;">The System has guessed a working load for ${migration.seeded.map(n=>`<b>${escapeHtml(n)}</b>`).join(", ")} from the heaviest weight in your history. Check those numbers in <b>⚙ Manage Exercises</b> — a guess is not a measurement, and this one directly sets what those lifts are worth.</p>`
-        : "";
+      const seededNote = `<p style="margin:0 0 10px;">You no longer have to supply a working load: the System takes the median of your three heaviest logged sets for that movement, and the figure climbs as you get stronger, so old lighter sets are worth proportionally less over time. Note the blind spot — if you train well below what you could lift, that median reads low and those sets score as though they were hard. Enter a number in <b>hard @</b> to overrule it.</p>`;
       showNoticeOverlay("SYSTEM RECALIBRATION", "EFFORT REWEIGHTED",
         `<p style="margin:0 0 10px;">The System weighs the load behind a rep, not the rep itself. Bodyweight movements are scored against your own bodyweight, with anything you strap on added to it. Cardio is scored by intensity per minute.</p>
-         <p style="margin:0 0 10px;">Lifts where your body isn't the resistance — curls, flies, extensions — are now scored against your <b>working load</b> instead: the weight at which a set is a genuine fight. Poundage alone can't be compared across movements, so this is how the System learns that a light dumbbell can still be brutal. Doubling the weight still exactly doubles the XP.</p>
+         <p style="margin:0 0 10px;">Lifts where your body isn't the resistance — curls, flies, extensions — are scored against your <b>working load</b> instead: the weight at which a set is a genuine fight. Poundage alone can't be compared across movements, so this is how the System learns that a light dumbbell can still be brutal. Doubling the weight still exactly doubles the XP.</p>
+         <p style="margin:0 0 10px;">Every exercise is now calibrated with a plain question — <b>what does this movement resist?</b> — rather than a number nobody can be expected to know. The answer sits in <b>⚙ Manage Exercises</b> with the XP rate it produces shown beside it.</p>
          ${seededNote}
          <p style="margin:0 0 10px;">Your entire hunt history has been rescored. ${moved}</p>
          <p style="margin:0;">Set your bodyweight in <b>⚙ Settings</b> — the default assumes ${DEFAULT_BODYWEIGHT} lbs and it calibrates everything.</p>`);
